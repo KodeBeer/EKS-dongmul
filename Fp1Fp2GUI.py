@@ -33,6 +33,7 @@ class main(tk.Tk):
         self.maximumInit = 1
         self.defaultStreak = 3
         self.stepValue = 0.1
+        self.scaleValue = 1.0
         self.EEGStarted = False
         self.serialStarted = False
         self.moodData = sharedData([self.exciteInit, self.curiosityInit])
@@ -88,6 +89,11 @@ class main(tk.Tk):
         streakValue =  self.streakSlider.get()
         if self.EEGStarted:
             self.eegInput.setRequiredStreak(streakValue)
+            
+    def updateScaleSliderValue(self, event):
+        self.scaleValue =  self.scaleSlider.get()
+        if self.serialStarted:
+            self.arduinoInput.setScaling(self.scaleValue)       
 
     def startArduino(self):
         if not self.serialStarted:
@@ -142,6 +148,18 @@ class main(tk.Tk):
     def disable_event(self):
         pass
     
+    def pauseAcq(self):        
+        if self.EEGStarted and self.serialStarted:
+            if self.pauseButton.config('text')[-1] == 'Running':
+                self.eegInput.setPaused(True)
+                self.arduinoInput.setPaused(True)
+                self.pauseButton.config(text='Paused')
+            else:
+                self.pauseButton.config(text='Running') 
+                self.eegInput.setPaused(False) 
+                self.arduinoInput.setPaused(False)                
+                
+    
     def resetCuriosity(self):
         if self.EEGStarted:
              self.curiosityBar['value'] = 0.5 * self.maximumInit
@@ -158,7 +176,7 @@ class main(tk.Tk):
         Main Panel settings
         """
         self.title("Excitement Curiosity simulator")
-        self.geometry("600x600")
+        self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True)
         self.emptyLabel = tk.Label(self,  width=20, height=2)
@@ -166,8 +184,14 @@ class main(tk.Tk):
         self.empty1Label = tk.Label(self,  width=20, height=1)
         self.empty1Label.grid(column = 0, row = 9)
         self.stopButton = tk.Button(self, text="Stop Program", command = self.stopProgram)
-        self.stopButton.grid(column = 2, row = 8, sticky = 'we') 
+        self.stopButton.grid(column = 3, row = 8, sticky = 'we') 
         self.protocol("WM_DELETE_WINDOW", self.disable_event)
+        
+        """
+        Pause button definition
+        """
+        self.pauseButton = tk.Button(self, text="Running", width=10, command = self.pauseAcq)
+        self.pauseButton.grid(column = 2, row = 8, sticky = 'we')
         
         """
         Progressbars plus label
@@ -215,7 +239,16 @@ class main(tk.Tk):
         self.stepSlider.grid(column = 2, row = 0, sticky = 'n') 
         self.slider_label = tk.Label(self, text="nbr steps", width=20, height=2)
         self.slider_label.grid(row=4, column = 2,  sticky='n')
-
+        
+        """
+        ScalingSlider settings
+        """ 
+        self.scaleSlider = tk.Scale(self, from_= 0.1, to = 2.0, orient="vertical", resolution = 0.05, length = 300, sliderlength = 20)
+        self.scaleSlider.bind("<ButtonRelease-1>", self.updateScaleSliderValue)
+        self.scaleSlider.set(self.scaleValue)
+        self.scaleSlider.grid(column = 4, row = 0, sticky = 'n') 
+        self.scale_label = tk.Label(self, text="arduino scale", width=20, height=2)
+        self.scale_label.grid(row=4, column = 4,  sticky='n')
         """
         EEG settings
         """  

@@ -33,6 +33,7 @@ class EEGSensor:
         self.up1 = self.classes.get('teeth')
         self.down1 = self.classes.get('blink')
         self.stepSize = 0.1
+        self.paused = False
 
         if motion_classifier.initialize(fp1Idx=0, fp2Idx=2):
             motion_classifier.start()
@@ -50,19 +51,20 @@ class EEGSensor:
         self.stepSize = stepSize
 
         while not finish.is_set():
-            probs, classes = motion_classifier.predict()
-            # sort probabilities in ascending order and gather sorted indices
-            sorted_indices = np.argsort(probs)
-            
-            # print the 2 predictions with the highest probabilities
-            self.print_prediction(sorted_indices[-1], probs[sorted_indices[-1]])
-
-            # take the highest probability prediction and its confidence
-            prediction = sorted_indices[-1]
-            confidence = probs[prediction]
-            self.process_prediction(prediction, confidence)
-            #sleep(0.5)
-            #print ("Evaluating inside EEG run def")
+            if not self.paused:
+                probs, classes = motion_classifier.predict()
+                # sort probabilities in ascending order and gather sorted indices
+                sorted_indices = np.argsort(probs)
+                
+                # print the 2 predictions with the highest probabilities
+                self.print_prediction(sorted_indices[-1], probs[sorted_indices[-1]])
+    
+                # take the highest probability prediction and its confidence
+                prediction = sorted_indices[-1]
+                confidence = probs[prediction]
+                self.process_prediction(prediction, confidence)
+                #sleep(0.5)
+                #print ("Evaluating inside EEG run def")
             
     def reset_state(self):
         self.prediction_streak = 0
@@ -137,7 +139,11 @@ class EEGSensor:
         
     def setMoodValue(self, selectMood, theValue):
         mood = self.moodData.get()                   
-        mood[selectMood] = theValue       
+        mood[selectMood] = theValue    
+        
+    def setPaused(self, paused):
+        self.paused = paused
+        print ("EEG Paused is: " + str(self.paused))
 
 
 # helper method to calculate Root Mean Square
