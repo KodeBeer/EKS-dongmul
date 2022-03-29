@@ -16,6 +16,7 @@ class arduinoController():
         self.exciteIdx = exciteIdx
         self.curiosityIx = curiosityIdx
         self.arduinoStarted = False
+        self.paused = False
         print ("Init usb handler with port: " + self.port + " speed: " + str(self.speed) )
         try:
             self.arduino = serial.Serial(self.port, self.speed)          
@@ -44,22 +45,23 @@ class arduinoController():
     def run(self, finish, moodData, dataSent):
         if self.arduinoStarted:  # This is after communication with Arduino was succesfully started
             while not finish.is_set():
-                response = str(self.arduino.read().decode())
-                if ('r' in response):  # r is message sent by Arduino to indicate ready for next command
-                    theMood = moodData.get()
-                    excitement = theMood[self.exciteIdx]
-                    curiosity = theMood[self.curiosityIx]
-                    excitement = '{: .2f}'.format(excitement * self.scaling)  # only 2 digits precision expected
-                    curiosity = '{: .2f}'.format(curiosity * self.scaling)
-                    freString = str(excitement)   
-                    freString += ','
-                    freString += str(curiosity)
-                    freString += '\n' 
-                    self.arduino.write(freString.encode())
-                    print("Inside Arduino excitement, curiosity: " + str(excitement) + ", " + str(curiosity))
-                    dataSent.set()
-                    sleep(0.2)
-                    #print("Arduino Ready")
+                if not self.paused:
+                    response = str(self.arduino.read().decode())
+                    if ('r' in response):  # r is message sent by Arduino to indicate ready for next command
+                        theMood = moodData.get()
+                        excitement = theMood[self.exciteIdx]
+                        curiosity = theMood[self.curiosityIx]
+                        excitement = '{: .2f}'.format(excitement * self.scaling)  # only 2 digits precision expected
+                        curiosity = '{: .2f}'.format(curiosity * self.scaling)
+                        freString = str(excitement)   
+                        freString += ','
+                        freString += str(curiosity)
+                        freString += '\n' 
+                        self.arduino.write(freString.encode())
+                        print("Inside Arduino excitement, curiosity: " + str(excitement) + ", " + str(curiosity))
+                        dataSent.set()
+                        sleep(0.2)
+                        #print("Arduino Ready")
             self.arduino.close()
             
     def setUsbPort(self, port):
@@ -71,6 +73,10 @@ class arduinoController():
         
         
     def setScaling(self, scale):      
-        self.scaling = 1 / scale
+        self.scaling = scale
+        
+    def setPaused(self, paused):
+        self.paused = paused
+        print ("Arduino Paused is: " + str(self.paused))
         
         
