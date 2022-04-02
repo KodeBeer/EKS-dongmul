@@ -7,6 +7,7 @@ Created on Thu Mar  3 19:36:50 2022
 
 import serial
 from time import sleep
+import time
 
 class arduinoController():
     def __init__(self, port, speed, exciteIdx = 0, curiosityIdx = 1):
@@ -17,6 +18,7 @@ class arduinoController():
         self.curiosityIx = curiosityIdx
         self.arduinoStarted = False
         self.paused = False
+        self.timeOut = False
         print ("Init usb handler with port: " + self.port + " speed: " + str(self.speed) )
         try:
             self.arduino = serial.Serial(self.port, self.speed)          
@@ -24,8 +26,14 @@ class arduinoController():
             """
             TODO: make sure system does not hang up, set time out
             """
+            startTime = time.time()
             while not 'i' in response:
-                response = str(self.arduino.read().decode())
+                response = str(self.arduino.read().decode())                
+                if (time.time() - startTime) > 5:
+                    self.timeOut = True
+                    break
+                
+            #if self.timeOut == False:
             print("Connection to " + self.port + " established succesfully!\n")
             self.arduino.flush()  # make sure buffer is emptied. There may be noise on the line due to USB connection
             freString = str(0.0)   

@@ -51,10 +51,10 @@ class main(tk.Tk):
         Wait for EEG and USB connection to be established before starting Data Acq
         """ 
         with open('ardSettings.txt') as reader:
-            line = reader.readline()
+            line = reader.readline()[:-1]  #remove the \n character
             self.portEntry.delete(0, tk.END)
             self.portEntry.insert(0, line)          
-            line = reader.readline() 
+            line = reader.readline()[:-1] 
             self.speedEntry.delete(0, tk.END)
             self.speedEntry.insert(0, line)  
             
@@ -108,8 +108,6 @@ class main(tk.Tk):
         if not self.serialStarted:
             port = self.portEntry.get()
             speed = self.speedEntry.get()  
-            
-
             
             self.arduinoInput = arduinoController(port, speed) # default values, can later be set via GUI
             if self.arduinoInput.checkArduinoStarted():
