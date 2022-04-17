@@ -10,12 +10,14 @@ from time import sleep
 
 class Arduino():
     def __init__(self):
-        self.ardsuccess = 314.15
-        
-        
+        pass
+
     def setUp(self):          
         thePort = "COM" + str(self.port)
         theSpeed = str(self.speed)
+        self.scaling = 1.0
+        self.excitement = 0.5
+        self.curiosity = 0.5
 
         try:
             self.arduino = serial.Serial(thePort, theSpeed)          
@@ -31,26 +33,38 @@ class Arduino():
                     break
                 
             #print("Connection to " + str(self.port) + " established succesfully!\n")
-            self.ardsuccess = 1.0
             self.arduino.flush()  # make sure buffer is emptied. There may be noise on the line due to USB connection
             freString = str(0.0)   
             freString += ','
             freString += str(0.0)
             freString += '\n' 
             self.arduino.write(freString.encode()) # to start syncing
-            self.arduinoStarted = True
         
         except Exception as e:
             print ("Something wrong in Arduino Setup: ")
             print(e) 
-            self.ardsuccess = -11.1
 
-    def run(self, excitement, curiosity, port, speed):
+    def run(self, excitement, curiosity, finish, port, speed):
         self.port = port.value
         self.speed = speed.value
 
         self.setUp()
-        excitement.value = self.ardsuccess
-        curiosity.value = 9.11
         
+        while  finish.value == 0:
+            response = str(self.arduino.read().decode())
+            if ('r' in response):  # r is message sent by Arduino to indicate ready for next command
+                
+                self.excitement = excitement.value
+                self.curiosity = curiosity.value
+                self.excitement = '{: .2f}'.format(self.excitement * self.scaling)  # only 2 digits precision expected
+                self.curiosity = '{: .2f}'.format(self.curiosity * self.scaling)
+                freString = str(self.excitement)   
+                freString += ','
+                freString += str(self.curiosity)
+                freString += '\n' 
+                self.arduino.write(freString.encode())
+                #print("Inside Arduino excitement, curiosity: " + str(excitement) + ", " + str(curiosity))
+                sleep(0.1)
+                #print("Arduino Ready")
+        self.arduino.close()      
   

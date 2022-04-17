@@ -10,6 +10,7 @@ import tkinter as tk
 
 import multiprocessing as mp
 from MotCortArduinoControl import Arduino 
+from MotCortEEGControl import EEG
 #from time import sleep    
         
 class mprocExample(tk.Tk):
@@ -21,7 +22,8 @@ class mprocExample(tk.Tk):
         self.curiosity = mp.Value('d', 0.5)
         self.ArduinoRunning = False
         self.theArduino = Arduino()
-
+        self.theEEG = EEG()
+        self.finish = mp.Value('i', 0)
         self.initGui()
         
     def initGui(self):
@@ -29,7 +31,8 @@ class mprocExample(tk.Tk):
         self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True) 
-        
+        self.stopButton = tk.Button(self, text="Stop", command = self.stopRun)
+        self.stopButton.grid(column = 5, row = 1, sticky = 'we')        
         """
             Arduino GUI settings
         """
@@ -45,10 +48,15 @@ class mprocExample(tk.Tk):
         self.speedEntry =  tk.Entry(self)
         self.speedEntry.grid(column = 4, row = 1, sticky ='nwe')
         self.speedEntry.insert(-1, "9600")
+                
         self.update()   
-        
+
+    def stopRun(self) :
+        self.finish.value = 1
+        print ("finished it")
+
     def run(self, *args): 
-        while not self.ArduinoRunning:
+        while self.finish.value == 0:
             self.update()  
             
         self.p.join()
@@ -63,10 +71,8 @@ class mprocExample(tk.Tk):
             print (comPort)
             port = mp.Value( 'i', comPort)  
             speed = mp.Value('i', 9600) 
-
-            self.p = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity,  port, speed))
-            #print (self.p)
             self.ArduinoRunning = True
+            self.p = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish,  port, speed))
             self.p.start()    
 
 
