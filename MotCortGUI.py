@@ -21,6 +21,7 @@ class mprocExample(tk.Tk):
         self.excitement = mp.Value('d', 0.5)
         self.curiosity = mp.Value('d', 0.5)
         self.ArduinoRunning = False
+        self.eegRunning = False
         self.theArduino = Arduino()
         self.theEEG = EEG()
         self.finish = mp.Value('i', 0)
@@ -48,6 +49,12 @@ class mprocExample(tk.Tk):
         self.speedEntry =  tk.Entry(self)
         self.speedEntry.grid(column = 4, row = 1, sticky ='nwe')
         self.speedEntry.insert(-1, "9600")
+        
+        """ 
+        EEG settings
+        """
+        self.startEEGButton = tk.Button(self, text="Start EEG", command = self.startEEG)
+        self.startEEGButton.grid(column = 0, row = 2, sticky = 'we')        
                 
         self.update()   
 
@@ -57,23 +64,33 @@ class mprocExample(tk.Tk):
 
     def run(self, *args): 
         while self.finish.value == 0:
-            self.update()  
             
-        self.p.join()
+            self.update()  
+        
+        if self.ArduinoRunning:
+            self.ArduinoRunning = False
+            self.ardProc.join()
+        if self.eegRunning:
+            self.eegRunning = False
+            self.eegProc.join()
         print(self.excitement.value)
         print(self.curiosity.value)
         self.destroy()
+ 
+    def startEEG(self):
+        self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish))
+        self.eegProc.start() 
+        self.eegRunning = True
         
+ 
     def startArduino(self):
         if not self.ArduinoRunning:
-            print ("Start de Arduino")
             comPort = int(self.portEntry.get())
-            print (comPort)
             port = mp.Value( 'i', comPort)  
             speed = mp.Value('i', 9600) 
             self.ArduinoRunning = True
-            self.p = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish,  port, speed))
-            self.p.start()    
+            self.ardProc = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish,  port, speed))
+            self.ardProc.start()    
 
 
 if __name__ == '__main__':
