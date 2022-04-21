@@ -11,24 +11,24 @@ import tkinter as tk
 import multiprocessing as mp
 from MotCortArduinoControl import Arduino 
 from MotCortEEGControl import EEG
-#from time import sleep    
+from time import sleep  
+import time  
         
 class mprocExample(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         #self.num = mp.Value('d', 0.0)
         #self.arr = mp.Array('i', range(10)) 
-        self.excitement = mp.Value('d', 0.5)
+        self.excitement = mp.Value('d', 0.0)
         self.curiosity = mp.Value('d', 0.5)
+        self.eegStatus = mp.Value('i', 0)
         self.ArduinoRunning = False
         self.eegRunning = False
-        self.theArduino = Arduino()
-        self.theEEG = EEG()
         self.finish = mp.Value('i', 0)
         self.initGui()
         
     def initGui(self):
-        self.title("that title broh")
+        self.title("Motor Cortex Control")
         self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True) 
@@ -63,9 +63,19 @@ class mprocExample(tk.Tk):
         print ("finished it")
 
     def run(self, *args): 
-        while self.finish.value == 0:
-            
+        lastTime = time.time()
+        while self.finish.value == 0:  
+            if time.time() - lastTime > 1 :
+                print ("Curiosity" + str(self.curiosity.value))
+                print ("Excitement" + str(self.excitement.value))
+                lastTime = time.time()
             self.update()  
+        
+        if self.finish.value == 2:
+            print ("eeg Status error: " + self.eegStatus.value)
+            
+        if self.finish.value == 3:
+            print ("EEG never started")
         
         if self.ArduinoRunning:
             self.ArduinoRunning = False
@@ -77,19 +87,21 @@ class mprocExample(tk.Tk):
         print(self.curiosity.value)
         self.destroy()
  
-    def startEEG(self):
-        self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish))
-        self.eegProc.start() 
-        self.eegRunning = True
+    def startEEG(self):  
+        if not self.eegRunning:
+            self.theEEG = EEG()
+            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish, self.eegStatus))
+            self.eegProc.start() 
+            self.eegRunning = True
         
  
     def startArduino(self):
         if not self.ArduinoRunning:
             comPort = int(self.portEntry.get())
-            port = mp.Value( 'i', comPort)  
-            speed = mp.Value('i', 9600) 
+            speed = int(self.speedEntry.get())
+            self.theArduino = Arduino(comPort, speed)
             self.ArduinoRunning = True
-            self.ardProc = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish,  port, speed))
+            self.ardProc = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish))
             self.ardProc.start()    
 
 

@@ -9,8 +9,9 @@ import time
 from time import sleep
 
 class Arduino():
-    def __init__(self):
-        pass
+    def __init__(self, port, speed):
+        self.port = port
+        self.speed = speed
 
     def setUp(self):          
         thePort = "COM" + str(self.port)
@@ -31,8 +32,6 @@ class Arduino():
                 if (time.time() - startTime) > 5:
                     self.timeOut = True
                     break
-                
-            #print("Connection to " + str(self.port) + " established succesfully!\n")
             self.arduino.flush()  # make sure buffer is emptied. There may be noise on the line due to USB connection
             freString = str(0.0)   
             freString += ','
@@ -44,9 +43,9 @@ class Arduino():
             print ("Something wrong in Arduino Setup: ")
             print(e) 
 
-    def run(self, excitement, curiosity, finish, port, speed):
-        self.port = port.value
-        self.speed = speed.value
+    def run(self, excitement, curiosity, finish):
+        #self.port = port.value
+        #self.speed = speed.value
 
         self.setUp()
         
