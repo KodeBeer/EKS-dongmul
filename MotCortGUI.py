@@ -22,7 +22,8 @@ class mprocExample(tk.Tk):
         self.excitement = mp.Value('d', 0.0)
         self.curiosity = mp.Value('d', 0.5)
         self.eegStatus = mp.Value('i', 0)
-        self.calibValue = mp.Value('i', 5000)
+        self.curiositycalibValue = mp.Value('i', 5000)
+        self.excitementValue = mp.Value('d', 1.0)
         self.ArduinoRunning = False
         self.eegRunning = False
         self.exciteInit = 0.5
@@ -54,11 +55,15 @@ class mprocExample(tk.Tk):
         self.curiosity_label = tk.Label(self, text="Curiosity level", width=20, height=2)
         self.curiosity_label.grid(row=4, column = 1,  sticky='n') 
 
-        self.calibSlider = tk.Scale(self, from_= 1000, to = 10000, orient="vertical", length = 300, sliderlength = 20)
+        self.calibSlider = tk.Scale(self, from_= 500, to = 20000, orient="vertical", length = 300, sliderlength = 20)
         self.calibSlider.bind("<ButtonRelease-1>", self.updateCalibSliderValue)
-        self.calibSlider.set(5000)
+        self.calibSlider.set(1500)
         self.calibSlider.grid(column = 2, row = 0, sticky = 'n')         
-        
+ 
+        self.excitementSlider = tk.Scale(self, from_= 1.0, to = 40.0, orient="vertical", length = 300, sliderlength = 20)
+        self.excitementSlider.bind("<ButtonRelease-1>", self.updateexcitementSliderValue)
+        self.excitementSlider.set(1)
+        self.excitementSlider.grid(column = 3, row = 0, sticky = 'n') 
         
         """
             Arduino GUI settings
@@ -85,8 +90,10 @@ class mprocExample(tk.Tk):
         self.update()   
         
     def updateCalibSliderValue(self, event):
-        self.calibValue.value =  self.calibSlider.get()
-       
+        self.curiositycalibValue.value =  self.calibSlider.get()
+
+    def updateexcitementSliderValue(self, event):
+        self.excitementValue.value = self.excitementSlider.get()
 
     def stopRun(self) :
         self.finish.value = 1
@@ -123,7 +130,7 @@ class mprocExample(tk.Tk):
     def startEEG(self):  
         if not self.eegRunning:
             self.theEEG = EEG()
-            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish, self.eegStatus, self.calibValue))
+            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish, self.eegStatus,self.curiositycalibValue, self.excitementValue ))
             self.eegProc.start() 
             self.eegRunning = True
         

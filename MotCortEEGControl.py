@@ -4,12 +4,14 @@ Created on Thu Mar 10 09:50:13 2022
 
 @author: Erwin
 """
-import random
-from time import sleep
+
+
 import brainaccess as ba
 import numpy as np
-from sys import exit
-import matplotlib.pyplot as plot
+from scipy.stats import spearmanr
+
+
+
 
 # Initialize the module
 
@@ -62,7 +64,7 @@ class EEG():
         eegStatus.value = issue
         finish.value = 2
     
-    def run(self, excitement, curiosity, finish, eegStatus, calibValue):
+    def run(self, excitement, curiosity, finish, eegStatus, calibValue, curiosityCalib):
         self.setup() 
         logFile = open("eeglog.txt", "a")
         logFile.write("Setup Completed and eegStarted is: ")
@@ -96,18 +98,17 @@ class EEG():
                     self.data_processed[m] = ba.preprocess(self.data[m])
                 logFile.write("Data block was processed \n")   
                 
+                curiosity.value, _ =  spearmanr(self.data_processed[0], self.data_processed[1])
+                curiosity.value = curiosityCalib.value * abs(curiosity.value)
 
-                for idx in range (len(self.data_processed[0])):
-                    self.data_processed[0][idx] = abs(self.data_processed[0][idx])
+                for idx in range (len(self.data_processed[0])):                   
+                    #self.data_processed[0][idx] = abs(self.data_processed[0][idx])
                     self.data_processed[1][idx] = abs(self.data_processed[1][idx])                    
                 
-                #self.data_processed[0] = map(abs, self.data_processed[0])
-                #self.data_processed[1] = map(abs, self.data_processed[1])
-                curiosity.value = sum(self.data_processed[0])  / calibValue.value
                 excitement.value = sum(self.data_processed[1])  / calibValue.value
-                logFile.write("curios = ")
-                logFile.write(str(curiosity.value))
-                logFile.write("\n")
+                #logFile.write("curios = ")
+                #logFile.write(str(curiosity.value))
+                #logFile.write("\n")
                 
                 if curiosity.value >0.9:
                     curiosity.value = 0.9
