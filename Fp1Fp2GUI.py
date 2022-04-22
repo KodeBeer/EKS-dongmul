@@ -190,7 +190,7 @@ class main(tk.Tk):
         """
         Main Panel settings
         """
-        self.title("Excitement Curiosity simulator")
+        self.title("FP1 FP2 Based Excitement Curiosity simulator")
         self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True)
