@@ -6,7 +6,7 @@ Adapted 14 MArch
 @author: Erwin
 """
 import tkinter as tk
-#from tkinter import ttk
+from tkinter import ttk
 
 import multiprocessing as mp
 from MotCortArduinoControl import Arduino 
@@ -22,18 +22,44 @@ class mprocExample(tk.Tk):
         self.excitement = mp.Value('d', 0.0)
         self.curiosity = mp.Value('d', 0.5)
         self.eegStatus = mp.Value('i', 0)
+        self.calibValue = mp.Value('i', 5000)
         self.ArduinoRunning = False
         self.eegRunning = False
+        self.exciteInit = 0.5
+        self.updateTime = 2
         self.finish = mp.Value('i', 0)
         self.initGui()
         
     def initGui(self):
+        """
+        Overview panel
+        """
+
+
         self.title("Motor Cortex Control")
         self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True) 
         self.stopButton = tk.Button(self, text="Stop", command = self.stopRun)
-        self.stopButton.grid(column = 5, row = 1, sticky = 'we')        
+        self.stopButton.grid(column = 5, row = 1, sticky = 'we') 
+        self.excitementBar = ttk.Progressbar(self, orient='vertical', length=300, mode='determinate', maximum = 1)
+        self.excitementBar['value'] = self.exciteInit
+        self.excitementBar.grid(column=0,row=0,sticky='we')
+        self.excitement_label = tk.Label(self, text="Excitement level", width=20, height=2)
+        self.excitement_label.grid(row=4, column = 0,  sticky='n')
+        
+        self.curiosityBar = ttk.Progressbar(self, orient='vertical', length=300, mode='determinate', maximum = 1)
+        self.curiosityBar['value'] = self.exciteInit
+        self.curiosityBar.grid(column=1,row=0,sticky='we')
+        self.curiosity_label = tk.Label(self, text="Curiosity level", width=20, height=2)
+        self.curiosity_label.grid(row=4, column = 1,  sticky='n') 
+
+        self.calibSlider = tk.Scale(self, from_= 1000, to = 10000, orient="vertical", length = 300, sliderlength = 20)
+        self.calibSlider.bind("<ButtonRelease-1>", self.updateCalibSliderValue)
+        self.calibSlider.set(5000)
+        self.calibSlider.grid(column = 2, row = 0, sticky = 'n')         
+        
+        
         """
             Arduino GUI settings
         """
@@ -54,9 +80,13 @@ class mprocExample(tk.Tk):
         EEG settings
         """
         self.startEEGButton = tk.Button(self, text="Start EEG", command = self.startEEG)
-        self.startEEGButton.grid(column = 0, row = 2, sticky = 'we')        
-                
+        self.startEEGButton.grid(column = 0, row = 2, sticky = 'we')  
+                        
         self.update()   
+        
+    def updateCalibSliderValue(self, event):
+        self.calibValue.value =  self.calibSlider.get()
+       
 
     def stopRun(self) :
         self.finish.value = 1
@@ -65,9 +95,11 @@ class mprocExample(tk.Tk):
     def run(self, *args): 
         lastTime = time.time()
         while self.finish.value == 0:  
-            if time.time() - lastTime > 1 :
+            if time.time() - lastTime > self.updateTime:
                 print ("Curiosity" + str(self.curiosity.value))
                 print ("Excitement" + str(self.excitement.value))
+                self.excitementBar['value'] = self.excitement.value
+                self.curiosityBar['value'] = self.curiosity.value 
                 lastTime = time.time()
             self.update()  
         
@@ -85,12 +117,13 @@ class mprocExample(tk.Tk):
             self.eegProc.join()
         print(self.excitement.value)
         print(self.curiosity.value)
+
         self.destroy()
  
     def startEEG(self):  
         if not self.eegRunning:
             self.theEEG = EEG()
-            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish, self.eegStatus))
+            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish, self.eegStatus, self.calibValue))
             self.eegProc.start() 
             self.eegRunning = True
         

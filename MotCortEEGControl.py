@@ -19,7 +19,7 @@ class EEG():
         self.sampleFreq = 125.0
         self.bufferTime = 1.0
         self.eegStarted = False
-        self.channel_numbers = [0, 1]
+        self.channel_numbers = [0, 2]
         self.scounter = 0
         self.goUp = True
 
@@ -62,7 +62,7 @@ class EEG():
         eegStatus.value = issue
         finish.value = 2
     
-    def run(self, excitement, curiosity, finish, eegStatus):
+    def run(self, excitement, curiosity, finish, eegStatus, calibValue):
         self.setup() 
         logFile = open("eeglog.txt", "a")
         logFile.write("Setup Completed and eegStarted is: ")
@@ -103,8 +103,8 @@ class EEG():
                 
                 #self.data_processed[0] = map(abs, self.data_processed[0])
                 #self.data_processed[1] = map(abs, self.data_processed[1])
-                curiosity.value = sum(self.data_processed[0])  / 5000
-                excitement.value = sum(self.data_processed[1])  / 5000
+                curiosity.value = sum(self.data_processed[0])  / calibValue.value
+                excitement.value = sum(self.data_processed[1])  / calibValue.value
                 logFile.write("curios = ")
                 logFile.write(str(curiosity.value))
                 logFile.write("\n")
