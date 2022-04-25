@@ -47,8 +47,17 @@ class main(tk.Tk):
         
     def mainloop(self):
         """
+        set the parameter values for com port and com speed
         Wait for EEG and USB connection to be established before starting Data Acq
         """ 
+        with open('ardSettings.txt') as reader:
+            line = reader.readline()[:-1]  #remove the \n character
+            self.portEntry.delete(0, tk.END)
+            self.portEntry.insert(0, line)          
+            line = reader.readline()[:-1] 
+            self.speedEntry.delete(0, tk.END)
+            self.speedEntry.insert(0, line)  
+            
         while self.programRunning:
             self.update() 
             sleep(0.2)
@@ -98,13 +107,19 @@ class main(tk.Tk):
     def startArduino(self):
         if not self.serialStarted:
             port = self.portEntry.get()
-            speed = self.speedEntry.get()          
+            speed = self.speedEntry.get()  
+            
             self.arduinoInput = arduinoController(port, speed) # default values, can later be set via GUI
             if self.arduinoInput.checkArduinoStarted():
                 self.serialStarted = True
                 self.startUsbButton.configure(bg="green") 
                 self.arduinoThread = Thread(target=self.arduinoInput.run, args = (self.finishRunning, self.moodData, self.dataSent ))
                 self.arduinoThread.start() 
+                with open('ardSettings.txt', "w") as writer:  
+                    port = str(port) + "\n"
+                    writer.write(port)
+                    speed = str(speed) + "\n"
+                    writer.write(speed)
             else:
                 print ("In GUI Arduino not started")
                 self.startUsbButton.configure(bg="red") 
@@ -175,7 +190,7 @@ class main(tk.Tk):
         """
         Main Panel settings
         """
-        self.title("Excitement Curiosity simulator")
+        self.title("FP1 FP2 Based Excitement Curiosity simulator")
         self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True)
