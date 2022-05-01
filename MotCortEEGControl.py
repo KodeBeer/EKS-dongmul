@@ -11,11 +11,6 @@ import numpy as np
 from scipy.stats import spearmanr
 
 
-
-
-# Initialize the module
-
-
 class EEG():
     def __init__(self):
         self.sampleFreq = 125.0
@@ -24,7 +19,6 @@ class EEG():
         self.channel_numbers = [0, 2]
         self.scounter = 0
         self.goUp = True
-
     
     def setup(self):
         logFile = open("eeglog.txt", "w")
@@ -64,19 +58,18 @@ class EEG():
         eegStatus.value = issue
         finish.value = 2
     
-    def run(self, excitement, curiosity, finish, eegStatus, calibValue, curiosityCalib):
+    def run(self, excitement, curiosity, finish, eegStatus, excitementCalib, curiosityCalib, algorithm):
         self.setup() 
         logFile = open("eeglog.txt", "a")
-        logFile.write("Setup Completed and eegStarted is: ")
-        logFile.write(str(self.eegStarted))
-        logFile.write("\n")
+        # logFile.write("Setup Completed and eegStarted is: ")
+        # logFile.write(str(self.eegStarted))
+        # logFile.write("\n")
         if self.eegStarted:
             ba.start_acquisition()
-            logFile.write("Started acq \n")
-            logFile.write("finish value = ") 
-            logFile.write(str(finish.value)) 
-            while  finish.value == 0:
-                
+            # logFile.write("Started acq \n")
+            # logFile.write("finish value = ") 
+            # logFile.write(str(finish.value)) 
+            while finish.value == 0:               
                 eeg_data = ba.get_data_samples(self.num_samples_to_acquire)
                 if eeg_data.connection_lost:
                     self.reportIssue(1, eegStatus, finish)
@@ -87,8 +80,7 @@ class EEG():
                 if eeg_data.reading_is_too_slow:
                     self.reportIssue(3, eegStatus, finish)
             
-                #shift the buffers and append the newly retrieved data
-                
+                #shift the buffers and append the newly retrieved data               
                 for m in range(0, len(self.channel_numbers)):
                     self.data[m] = np.roll(self.data[m], -eeg_data.num_samples)
                     self.data[m, -eeg_data.num_samples:] = eeg_data.measurements[m]
@@ -96,44 +88,32 @@ class EEG():
                 # preprocess the eeg data
                 for m in range(0, len(self.channel_numbers)):
                     self.data_processed[m] = ba.preprocess(self.data[m])
-                logFile.write("Data block was processed \n")   
-                
-                curiosity.value, _ =  spearmanr(self.data_processed[0], self.data_processed[1])
-                curiosity.value = curiosityCalib.value * abs(curiosity.value)
-
-                for idx in range (len(self.data_processed[0])):                   
-                    #self.data_processed[0][idx] = abs(self.data_processed[0][idx])
-                    self.data_processed[1][idx] = abs(self.data_processed[1][idx])                    
-                
-                excitement.value = sum(self.data_processed[1])  / calibValue.value
-                #logFile.write("curios = ")
-                #logFile.write(str(curiosity.value))
-                #logFile.write("\n")
+                    
+                """
+                Do the specific parameter extraction.
+                """  
+                if algorithm.value == 0:
+                    curiosity.value, _ =  spearmanr(self.data_processed[0], self.data_processed[1])
+                    curiosity.value = curiosityCalib.value * abs(curiosity.value)                    
+                    for idx in range (len(self.data_processed[0])):                   
+                        #self.data_processed[0][idx] = abs(self.data_processed[0][idx])
+                        self.data_processed[1][idx] = abs(self.data_processed[1][idx])                                       
+                    excitement.value = sum(self.data_processed[1])  / excitementCalib.value
                 
                 if curiosity.value >0.9:
                     curiosity.value = 0.9
-
                 if excitement.value >0.9:
                     excitement.value = 0.9
-                """
-                if self.goUp == True:
-                    if excitement.value < 0.8:
-                        excitement.value += 0.05
-                    else:
-                        self.goUp = False
+          
                     
-                if self.goUp == False:
-                    if excitement.value >0.1:
-                        excitement.value -= 0.05                        
-                    else:
-                        self.goUp = True
-                """            
-                    
-
             ba.stop_acquisition()  
             logFile.close()
         else: 
             eegStatus.value = 3
-            
+        
+        """             
+fourierTransform = np.fft.fft(amplitude)/len(amplitude)           # Normalize amplitude
 
+fourierTransform = fourierTransform[range(int(len(amplitude)/2))] # Exclude sampling frequency
+        """ 
             
