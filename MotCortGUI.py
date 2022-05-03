@@ -11,7 +11,7 @@ from tkinter import ttk
 import multiprocessing as mp
 from MotCortArduinoControl import Arduino 
 from MotCortEEGControl import EEG
-from time import sleep  
+#from time import sleep  
 import time  
         
 class mprocExample(tk.Tk):
@@ -24,7 +24,7 @@ class mprocExample(tk.Tk):
         self.curiosity = mp.Value('d', 0.5)
         self.curiosityCalib = mp.Value('d', 1.0)
         self.excitementCalib = mp.Value('d', 2200.0)
-        self.algorithm = mp.Value('i', 0)
+        self.algorithmSel = mp.Value('i', 0)
         self.ArduinoRunning = False
         self.eegRunning = False
         self.exciteInit = 0.5
@@ -91,9 +91,13 @@ class mprocExample(tk.Tk):
         """
         self.startEEGButton = tk.Button(self, text="Start EEG", command = self.startEEG)
         self.startEEGButton.grid(column = 0, row = 15, sticky = 'we')  
-                        
+        self.selectedAlgorithm= tk.StringVar()   
+        self.algoSelectorCombo= ttk.Combobox(self, textvariable= self.selectedAlgorithm)         
+        self.algoSelectorCombo['values']= ('Weight', 'Fourier')   
+        self.algoSelectorCombo.current(0)
+        self.algoSelectorCombo.grid(column = 1, row = 15, sticky ='nwe')       
         self.update()   
-        
+              
     def updateCalibSliderValue(self, event):
         self.curiosityCalib.value =  self.curiositySlider.get() / 10
 
@@ -107,9 +111,11 @@ class mprocExample(tk.Tk):
     def run(self, *args): 
         lastTime = time.time()
         while self.finish.value == 0:  
+            self.algorithmSel.value = int(self.algoSelectorCombo.current())
             if time.time() - lastTime > self.updateTime:
-                print ("Curiosity" + str(self.curiosity.value))
-                print ("Excitement" + str(self.excitement.value))
+                print ("Curiosity: " + str(self.curiosity.value))
+                print ("Excitement: " + str(self.excitement.value))
+                print ("Algorithm: " + str(self.algorithmSel.value))
                 self.excitementBar['value'] = self.excitement.value
                 self.curiosityBar['value'] = self.curiosity.value 
                 lastTime = time.time()
@@ -129,6 +135,7 @@ class mprocExample(tk.Tk):
             self.eegProc.join()
         print(self.excitement.value)
         print(self.curiosity.value)
+        print(self.algorithmSel.value)
 
         self.destroy()
  
@@ -136,7 +143,7 @@ class mprocExample(tk.Tk):
         if not self.eegRunning:
             self.theEEG = EEG()
             self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish,
-                                        self.eegStatus, self.excitementCalib, self.curiosityCalib, self.algorithm))
+                                        self.eegStatus, self.excitementCalib, self.curiosityCalib, self.algorithmSel))
             self.eegProc.start() 
             self.eegRunning = True
                                                                                                    

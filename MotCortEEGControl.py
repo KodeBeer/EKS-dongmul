@@ -19,6 +19,7 @@ class EEG():
         self.channel_numbers = [0, 2]
         self.scounter = 0
         self.goUp = True
+        self.writeToFile = True
     
     def setup(self):
         logFile = open("eeglog.txt", "w")
@@ -100,20 +101,40 @@ class EEG():
                         self.data_processed[1][idx] = abs(self.data_processed[1][idx])                                       
                     excitement.value = sum(self.data_processed[1])  / excitementCalib.value
                 
+                if algorithm.value == 1:  
+                    excitement.value = 0.9
+                    npSignal = np.array(self.data_processed[0])
+                    excitement.value = 0.75                    
+                    
+                    fourierTransform = np.fft.fft(npSignal)/len(npSignal)          # Normalize amplitude 
+                    fourierTransform = fourierTransform[range(int(len(npSignal)/2))] # Exclude sampling frequency                    
+                    fourierTransform = np.real(fourierTransform)
+                    
+                    excitement.value = 0.3
+                    if self.writeToFile:
+                        excitement.value = 0.7
+                        textfile = open("theTransform.txt", "w")
+                        textfile.write("here comes fourier on selfmade array \n")
+                        for element in fourierTransform:
+                            textfile.write(str(element) + "\n")
+                        textfile.close() 
+                        self.writeToFile = False
+                        
                 if curiosity.value >0.9:
                     curiosity.value = 0.9
                 if excitement.value >0.9:
                     excitement.value = 0.9
-          
-                    
+                             
             ba.stop_acquisition()  
             logFile.close()
         else: 
             eegStatus.value = 3
         
         """             
-fourierTransform = np.fft.fft(amplitude)/len(amplitude)           # Normalize amplitude
-
-fourierTransform = fourierTransform[range(int(len(amplitude)/2))] # Exclude sampling frequency
+a_list = ["abc", "def", "ghi"]
+textfile = open("a_file.txt", "w")
+for element in a_list:
+textfile. write(element + "\n")
+textfile. close()
         """ 
             
