@@ -9,6 +9,7 @@ Created on Thu Mar 10 09:50:13 2022
 import brainaccess as ba
 import numpy as np
 from scipy.stats import spearmanr
+from scipy.signal import find_peaks
 
 
 class EEG():
@@ -16,13 +17,16 @@ class EEG():
         self.sampleFreq = 125.0
         self.bufferTime = 1.0
         self.eegStarted = False
-        self.channel_numbers = [0, 2]
+        self.channel_numbers = [1, 2]
         self.scounter = 0
         self.goUp = True
         self.writeToFile = True
+        self.measIter = 10
+        self.limitHigh = 0.9
     
     def setup(self):
         logFile = open("eeglog.txt", "w")
+        logFile.write("Initialize EEG \n")
         response = ba.initialize()
         if response != 0:
             self.eegStarted = False
@@ -31,6 +35,7 @@ class EEG():
         logFile.write("BA is init \n")
         self.eegStarted = True
         ba.set_sampling_frequency(self.sampleFreq)
+        logFile.write("Started EEG \n")
 
         #electrode_labels = ["Fp1", "Fp2"]
         self.bias_channel_numbers = [0]
@@ -46,8 +51,8 @@ class EEG():
         filt = ba.FilterSettings()
         filt.type = "bandpass"
         filt.order = 2
-        filt.min_frequency = 7
-        filt.max_frequency = 20
+        filt.min_frequency = 1
+        filt.max_frequency = 16
         ba.set_filter_settings([filt])
         self.data_processed = np.zeros((len(self.channel_numbers), len(time)))
         self.num_samples_to_acquire = 20
@@ -103,38 +108,32 @@ class EEG():
                 
                 if algorithm.value == 1:  
                     excitement.value = 0.9
-                    npSignal = np.array(self.data_processed[0])
-                    excitement.value = 0.75                    
-                    
+                    npSignal = np.array(self.data_processed[1])
+                    excitement.value = 0.75                                        
                     fourierTransform = np.fft.fft(npSignal)/len(npSignal)          # Normalize amplitude 
                     fourierTransform = fourierTransform[range(int(len(npSignal)/2))] # Exclude sampling frequency                    
                     fourierTransform = np.real(fourierTransform)
-                    
-                    excitement.value = 0.3
-                    if self.writeToFile:
-                        excitement.value = 0.7
-                        textfile = open("theTransform.txt", "w")
-                        textfile.write("here comes fourier on selfmade array \n")
-                        for element in fourierTransform:
-                            textfile.write(str(element) + "\n")
-                        textfile.close() 
-                        self.writeToFile = False
-                        
-                if curiosity.value >0.9:
-                    curiosity.value = 0.9
-                if excitement.value >0.9:
-                    excitement.value = 0.9
+                    fourierTransform = np.abs(fourierTransform) ** 2
+                    indices = find_peaks(fourierTransform)[0]
+                    highPointValue = 150
+                    highPointIdx = 0
+                    if len(indices) > 0:
+                        for peak in indices:
+                            thisHighPoint = fourierTransform[peak]
+                            if thisHighPoint > highPointValue:
+                                highPointValue = thisHighPoint
+                                highPointIdx = peak
+                        curiosity.value = highPointIdx / 7
+
+                if curiosity.value > self.limitHigh:
+                    curiosity.value = self.limitHigh
+                if excitement.value > self.limitHigh:
+                    excitement.value = self.limitHigh
                              
             ba.stop_acquisition()  
             logFile.close()
         else: 
             eegStatus.value = 3
         
-        """             
-a_list = ["abc", "def", "ghi"]
-textfile = open("a_file.txt", "w")
-for element in a_list:
-textfile. write(element + "\n")
-textfile. close()
-        """ 
+
             
