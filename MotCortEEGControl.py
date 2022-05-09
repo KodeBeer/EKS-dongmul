@@ -14,15 +14,15 @@ from scipy.signal import find_peaks
 
 class EEG():
     def __init__(self):
-        self.sampleFreq = 125.0
+        self.sampleFreq = 250.0
+        self.fftLength = int(4 * self.sampleFreq)
         self.bufferTime = 1.0
         self.eegStarted = False
         self.channel_numbers = [1, 2]
-        self.scounter = 0
-        self.goUp = True
-        self.writeToFile = True
-        self.measIter = 10
-        self.limitHigh = 0.9
+        self.limitHigh = 0.99
+        self.curiosityMultiplier = 1.0 / 28.0
+        self.curiosityThreshold = 150
+        #self.curiosityFilter = [0.5, 0.5, 0.5] used later for smoother transitions
     
     def setup(self):
         logFile = open("eeglog.txt", "w")
@@ -36,7 +36,6 @@ class EEG():
         self.eegStarted = True
         ba.set_sampling_frequency(self.sampleFreq)
         logFile.write("Started EEG \n")
-
         #electrode_labels = ["Fp1", "Fp2"]
         self.bias_channel_numbers = [0]
         ba.set_channels(self.channel_numbers, self.bias_channel_numbers)
@@ -55,14 +54,18 @@ class EEG():
         filt.max_frequency = 16
         ba.set_filter_settings([filt])
         self.data_processed = np.zeros((len(self.channel_numbers), len(time)))
-        self.num_samples_to_acquire = 20
+        self.num_samples_to_acquire = 40
         self.tot_num_samples = time * self.sampleFreq
+        logFile.write("Length of processed data: " + str(len(self.data_processed[0])) + "\n" )
         logFile.write("setup is completed \n")
         logFile.close()
 
     def reportIssue(self, issue, eegStatus, finish):
         eegStatus.value = issue
         finish.value = 2
+        
+    def setCuriosityMultiplier(self, multiplier):
+        self.curiosityMultiplier = multiplier
     
     def run(self, excitement, curiosity, finish, eegStatus, excitementCalib, curiosityCalib, algorithm):
         self.setup() 
@@ -110,12 +113,12 @@ class EEG():
                     excitement.value = 0.9
                     npSignal = np.array(self.data_processed[1])
                     excitement.value = 0.75                                        
-                    fourierTransform = np.fft.fft(npSignal)/len(npSignal)          # Normalize amplitude 
+                    fourierTransform = np.fft.rfft(npSignal, n = self.fftLength)/len(npSignal)          # Normalize amplitude 
                     fourierTransform = fourierTransform[range(int(len(npSignal)/2))] # Exclude sampling frequency                    
-                    fourierTransform = np.real(fourierTransform)
+                    #fourierTransform = np.real(fourierTransform)
                     fourierTransform = np.abs(fourierTransform) ** 2
                     indices = find_peaks(fourierTransform)[0]
-                    highPointValue = 150
+                    highPointValue =  self.curiosityThreshold
                     highPointIdx = 0
                     if len(indices) > 0:
                         for peak in indices:
@@ -123,7 +126,7 @@ class EEG():
                             if thisHighPoint > highPointValue:
                                 highPointValue = thisHighPoint
                                 highPointIdx = peak
-                        curiosity.value = highPointIdx / 7
+                        curiosity.value = highPointIdx * self.curiosityMultiplier
 
                 if curiosity.value > self.limitHigh:
                     curiosity.value = self.limitHigh

@@ -28,7 +28,7 @@ class mprocExample(tk.Tk):
         self.ArduinoRunning = False
         self.eegRunning = False
         self.exciteInit = 0.5
-        self.updateTime = 2
+        self.updateTime = 0.5
         self.finish = mp.Value('i', 0)
         self.initGui()
         
