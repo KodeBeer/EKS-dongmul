@@ -20,9 +20,47 @@ class EEG():
         self.eegStarted = False
         self.channel_numbers = [1, 2]
         self.limitHigh = 0.99
-        self.curiosityMultiplier = 1.0 / 28.0
-        self.curiosityThreshold = 150
-        #self.curiosityFilter = [0.5, 0.5, 0.5] used later for smoother transitions
+        self.smoothIdx = 0
+        self.smoothExcitement = np.array([0.5, 0.5, 0.5])
+        self.smoothCuriosity = np.array([0.5, 0.5, 0.5])
+
+    def findPeakInFourier(self, Signal, threshold):
+        fourierTransform = np.fft.rfft(Signal, n = self.fftLength)/len(Signal)          # Normalize amplitude 
+        fourierTransform = fourierTransform[range(int(len(Signal)/2))] # Exclude sampling frequency                    
+        fourierTransform = np.abs(fourierTransform) ** 2
+        indices = find_peaks(fourierTransform)[0]
+        highPointValue =  threshold
+        highPointIdx = 0
+        if len(indices) > 0:
+            for peak in indices:
+                thisHighPoint = fourierTransform[peak]
+                if thisHighPoint > highPointValue:
+                    highPointValue = thisHighPoint
+                    highPointIdx = peak  
+        return highPointIdx 
+
+        
+
+    def fourierAnalysis(self, curiosity, excitement, freqScaler, curiosityScaler, excitementScaler): 
+        
+        highPoint = self.findPeakInFourier(self.data_processed[1], curiosityScaler.value)  
+        self.smoothCuriosity[self.smoothIdx] = highPoint * freqScaler.value        
+        curiosity.value =  np.average(self.smoothCuriosity)         
+      
+        highPoint = self.findPeakInFourier(self.data_processed[0], curiosityScaler.value)         
+        self.smoothExcitement[self.smoothIdx] = highPoint * freqScaler.value  
+        excitement.value =  np.average(self.smoothExcitement)       
+        self.smoothIdx += 1
+        if self.smoothIdx == len(self.smoothExcitement):
+            self.smoothIdx = 0
+        
+        
+    def correlation(self, curiosity, excitement, curiosityScaler, excitementScaler):
+        curiosity.value, _ =  spearmanr(self.data_processed[0], self.data_processed[1])
+        curiosity.value = curiosityScaler.value * abs(curiosity.value)  / 10                  
+        for idx in range (len(self.data_processed[0])):                   
+            self.data_processed[1][idx] = abs(self.data_processed[1][idx])                                       
+        excitement.value = sum(self.data_processed[1])  / excitementScaler.value
     
     def setup(self):
         logFile = open("eeglog.txt", "w")
@@ -60,14 +98,43 @@ class EEG():
         logFile.write("setup is completed \n")
         logFile.close()
 
+    def acquireData(self, eegStatus, finish):
+        eeg_data = ba.get_data_samples(self.num_samples_to_acquire)
+        if eeg_data.connection_lost:
+            self.reportIssue(1, eegStatus, finish)
+    
+        if eeg_data.stream_disrupted:
+            self.reportIssue(2, eegStatus, finish)
+    
+        if eeg_data.reading_is_too_slow:
+            self.reportIssue(3, eegStatus, finish)
+    
+        #shift the buffers and append the newly retrieved data               
+        for m in range(0, len(self.channel_numbers)):
+            self.data[m] = np.roll(self.data[m], -eeg_data.num_samples)
+            self.data[m, -eeg_data.num_samples:] = eeg_data.measurements[m]
+    
+        # preprocess the eeg data
+        for m in range(0, len(self.channel_numbers)):
+            self.data_processed[m] = ba.preprocess(self.data[m])
+
     def reportIssue(self, issue, eegStatus, finish):
         eegStatus.value = issue
-        finish.value = 2
-        
-    def setCuriosityMultiplier(self, multiplier):
-        self.curiosityMultiplier = multiplier
+        finish.value = 2        
+
+    def limitMaxValues(self, curiosity, excitement):
+        if curiosity.value > self.limitHigh:
+            curiosity.value = self.limitHigh
+        if excitement.value > self.limitHigh:
+            excitement.value = self.limitHigh
     
-    def run(self, excitement, curiosity, finish, eegStatus, excitementCalib, curiosityCalib, algorithm):
+    def smooth(self, curiosity, excitement):
+        
+      
+        curiosity.value = np.average(self.smoothCuriosity)
+        excitement.value = np.average(self.smoothExcitement)
+    
+    def run(self, excitement, curiosity, finish, eegStatus, excitementScaler, curiosityScaler, freqScaler, algorithm):
         self.setup() 
         logFile = open("eeglog.txt", "a")
         # logFile.write("Setup Completed and eegStarted is: ")
@@ -78,65 +145,25 @@ class EEG():
             # logFile.write("Started acq \n")
             # logFile.write("finish value = ") 
             # logFile.write(str(finish.value)) 
-            while finish.value == 0:               
-                eeg_data = ba.get_data_samples(self.num_samples_to_acquire)
-                if eeg_data.connection_lost:
-                    self.reportIssue(1, eegStatus, finish)
-            
-                if eeg_data.stream_disrupted:
-                    self.reportIssue(2, eegStatus, finish)
-            
-                if eeg_data.reading_is_too_slow:
-                    self.reportIssue(3, eegStatus, finish)
-            
-                #shift the buffers and append the newly retrieved data               
-                for m in range(0, len(self.channel_numbers)):
-                    self.data[m] = np.roll(self.data[m], -eeg_data.num_samples)
-                    self.data[m, -eeg_data.num_samples:] = eeg_data.measurements[m]
-            
-                # preprocess the eeg data
-                for m in range(0, len(self.channel_numbers)):
-                    self.data_processed[m] = ba.preprocess(self.data[m])
+            while finish.value == 0:                   
+                self.acquireData(eegStatus, finish)
                     
                 """
                 Do the specific parameter extraction.
                 """  
                 if algorithm.value == 0:
-                    curiosity.value, _ =  spearmanr(self.data_processed[0], self.data_processed[1])
-                    curiosity.value = curiosityCalib.value * abs(curiosity.value)                    
-                    for idx in range (len(self.data_processed[0])):                   
-                        #self.data_processed[0][idx] = abs(self.data_processed[0][idx])
-                        self.data_processed[1][idx] = abs(self.data_processed[1][idx])                                       
-                    excitement.value = sum(self.data_processed[1])  / excitementCalib.value
-                
+                    self.correlation(curiosity, excitement, curiosityScaler, excitementScaler)
+                    
                 if algorithm.value == 1:  
-                    excitement.value = 0.9
-                    npSignal = np.array(self.data_processed[1])
-                    excitement.value = 0.75                                        
-                    fourierTransform = np.fft.rfft(npSignal, n = self.fftLength)/len(npSignal)          # Normalize amplitude 
-                    fourierTransform = fourierTransform[range(int(len(npSignal)/2))] # Exclude sampling frequency                    
-                    #fourierTransform = np.real(fourierTransform)
-                    fourierTransform = np.abs(fourierTransform) ** 2
-                    indices = find_peaks(fourierTransform)[0]
-                    highPointValue =  self.curiosityThreshold
-                    highPointIdx = 0
-                    if len(indices) > 0:
-                        for peak in indices:
-                            thisHighPoint = fourierTransform[peak]
-                            if thisHighPoint > highPointValue:
-                                highPointValue = thisHighPoint
-                                highPointIdx = peak
-                        curiosity.value = highPointIdx * self.curiosityMultiplier
-
-                if curiosity.value > self.limitHigh:
-                    curiosity.value = self.limitHigh
-                if excitement.value > self.limitHigh:
-                    excitement.value = self.limitHigh
+                    self.fourierAnalysis(curiosity, excitement, freqScaler, curiosityScaler, excitementScaler)                     
+                    
+                self.limitMaxValues(curiosity, excitement)
                              
             ba.stop_acquisition()  
             logFile.close()
         else: 
             eegStatus.value = 3
+            logFile.close()
         
 
             
