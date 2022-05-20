@@ -11,7 +11,7 @@ from tkinter import ttk
 import multiprocessing as mp
 from MotCortArduinoControl import Arduino 
 from MotCortEEGControl import EEG
-from time import sleep  
+#from time import sleep  
 import time  
         
 class mprocExample(tk.Tk):
@@ -19,82 +19,147 @@ class mprocExample(tk.Tk):
         super().__init__(*args, **kwargs)
         #self.num = mp.Value('d', 0.0)
         #self.arr = mp.Array('i', range(10)) 
+        self.eegStatus = mp.Value('i', 0)
         self.excitement = mp.Value('d', 0.0)
         self.curiosity = mp.Value('d', 0.5)
-        self.eegStatus = mp.Value('i', 0)
-        self.curiositycalibValue = mp.Value('i', 5000)
-        self.excitementValue = mp.Value('d', 1.0)
+        self.curiosityScaler = mp.Value('d', 1.0)
+        self.excitementScaler = mp.Value('d', 2200.0)
+        self.freqScaler = mp.Value('d', 1.0 / 28.0)
+        self.algorithmSel = mp.Value('i', 0)
         self.ArduinoRunning = False
         self.eegRunning = False
         self.exciteInit = 0.5
-        self.updateTime = 2
+        self.updateTime = 0.5
         self.finish = mp.Value('i', 0)
+        self.curioSliderMin = 1
+        self.curioSliderMax = 30     
+        self.excitementSliderMin = 100          
+        self.excitementSliderMax = 100000              
+        self.freqScaleSliderMin =  1.0      
+        self.freqScaleSliderMax =  40  
+        self.curiosityCorrelationInit = 10.0
+        self.excitementCorrelationInit= 2300.0
+        self.freqCorrelationInit= 1.0
+        self.curiosityFourierInit = 150.0
+        self.excitementFourierInit= 50
+        self.freqFourierInit= 28        
+        
+        
         self.initGui()
         
     def initGui(self):
         """
         Overview panel
         """
-
-
         self.title("Motor Cortex Control")
         self.geometry("800x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True) 
         self.stopButton = tk.Button(self, text="Stop", command = self.stopRun)
-        self.stopButton.grid(column = 5, row = 1, sticky = 'we') 
+        self.stopButton.grid(column = 0, row = 20, sticky = 'we') 
         self.excitementBar = ttk.Progressbar(self, orient='vertical', length=300, mode='determinate', maximum = 1)
         self.excitementBar['value'] = self.exciteInit
-        self.excitementBar.grid(column=0,row=0,sticky='we')
+        self.excitementBar.grid(column = 0, row = 5, sticky='we')
         self.excitement_label = tk.Label(self, text="Excitement level", width=20, height=2)
-        self.excitement_label.grid(row=4, column = 0,  sticky='n')
+        self.excitement_label.grid(column = 0, row = 0, sticky='n')
+        
+         
+        self.exciteScaler_label = tk.Label(self, text="Surface Divider", width=20, height=2)
+        self.exciteScaler_label.grid(column = 3, row = 0, sticky='n')
+        self.curiosScaler_label = tk.Label(self, text="Correlation Multiple 0.1", width=20, height=2)
+        self.curiosScaler_label.grid(column = 2, row = 0, sticky='n')
+        self.freqScaler_label = tk.Label(self, text="Not used", width=20, height=2)
+        self.freqScaler_label.grid(column = 4, row = 0, sticky='n')
         
         self.curiosityBar = ttk.Progressbar(self, orient='vertical', length=300, mode='determinate', maximum = 1)
         self.curiosityBar['value'] = self.exciteInit
-        self.curiosityBar.grid(column=1,row=0,sticky='we')
-        self.curiosity_label = tk.Label(self, text="Curiosity level", width=20, height=2)
-        self.curiosity_label.grid(row=4, column = 1,  sticky='n') 
+        self.curiosityBar.grid(column = 1, row = 5, sticky='we')
+        self.curiosity_label = tk.Label(self, text = "Curiosity level", width=20, height=2)
+        self.curiosity_label.grid(column = 1, row = 0,   sticky='n') 
 
-        self.calibSlider = tk.Scale(self, from_= 500, to = 20000, orient="vertical", length = 300, sliderlength = 20)
-        self.calibSlider.bind("<ButtonRelease-1>", self.updateCalibSliderValue)
-        self.calibSlider.set(1500)
-        self.calibSlider.grid(column = 2, row = 0, sticky = 'n')         
- 
-        self.excitementSlider = tk.Scale(self, from_= 1.0, to = 40.0, orient="vertical", length = 300, sliderlength = 20)
+        self.curiositySlider = tk.Scale(self, from_=  self.curioSliderMin, to =  self.curioSliderMax, orient = "vertical", length = 300, sliderlength = 20)
+        self.curiositySlider.bind("<ButtonRelease-1>", self.updateCalibSliderValue)
+        self.curiositySlider.set(10)
+        self.curiositySlider.grid(column = 2, row = 5, sticky = 'n')           
+        
+        self.excitementSlider = tk.Scale(self, from_= self.excitementSliderMin, to = self.excitementSliderMax, orient="vertical", length = 300, sliderlength = 20)
         self.excitementSlider.bind("<ButtonRelease-1>", self.updateexcitementSliderValue)
-        self.excitementSlider.set(1)
-        self.excitementSlider.grid(column = 3, row = 0, sticky = 'n') 
+        self.excitementSlider.set(2300)
+        self.excitementSlider.grid(column = 3, row = 5, sticky = 'n') 
+        
+        self.freqScaleSlider = tk.Scale(self, from_= self.freqScaleSliderMin, to = self.freqScaleSliderMax, orient="vertical", length = 300, sliderlength = 20)
+        self.freqScaleSlider.bind("<ButtonRelease-1>", self.updatefreqScaleSliderValue)
+        self.freqScaleSlider.set(28)
+        self.freqScaleSlider.grid(column = 4, row = 5, sticky = 'n') 
         
         """
             Arduino GUI settings
         """
         self.startArduinoButton = tk.Button(self, text="Start Arduino", command = self.startArduino)
-        self.startArduinoButton.grid(column = 0, row = 1, sticky = 'we') 
+        self.startArduinoButton.grid(column = 0, row = 10, sticky = 'we') 
         self.portLabel =tk.Label(self, text = "Port nbr")
-        self.portLabel.grid(column = 1, row = 1, sticky ='nwe')
+        self.portLabel.grid(column = 1, row = 10, sticky ='nwe')
         self.portEntry =  tk.Entry(self)
-        self.portEntry.grid(column = 2, row = 1, sticky ='nwe')
+        self.portEntry.grid(column = 2, row = 10, sticky ='nwe')
         self.portEntry.insert( -1, "3")
-        self.speedLabel =tk.Label(self, text = "Serial Speed")
-        self.speedLabel.grid(column = 3, row = 1, sticky ='nwe')
+        self.speedLabel = tk.Label(self, text = "Serial Speed")
+        self.speedLabel.grid(column = 1, row = 15, sticky ='nwe')
         self.speedEntry =  tk.Entry(self)
-        self.speedEntry.grid(column = 4, row = 1, sticky ='nwe')
+        self.speedEntry.grid(column = 2, row = 15, sticky ='nwe')
         self.speedEntry.insert(-1, "9600")
         
         """ 
         EEG settings
         """
         self.startEEGButton = tk.Button(self, text="Start EEG", command = self.startEEG)
-        self.startEEGButton.grid(column = 0, row = 2, sticky = 'we')  
-                        
+        self.startEEGButton.grid(column = 0, row = 15, sticky = 'we')  
+        self.selectedAlgorithm= tk.StringVar()   
+        self.algoSelectorCombo= ttk.Combobox(self, textvariable= self.selectedAlgorithm)         
+        self.algoSelectorCombo['values']= ('Weight', 'Fourier')   
+        self.algoSelectorCombo.current(0)
+        self.algoSelectorCombo.grid(column = 1, row = 20, sticky ='nwe')   
+        self.algoSelectorCombo.bind('<<ComboboxSelected>>', self.algoChanged)  
         self.update()   
-        
+
+    def updatefreqScaleSliderValue(self, event):
+        self.freqScaler.value = 1.0 / self.freqScaleSlider.get()
+             
     def updateCalibSliderValue(self, event):
-        self.curiositycalibValue.value =  self.calibSlider.get()
+        self.curiosityScaler.value =  self.curiositySlider.get()
 
     def updateexcitementSliderValue(self, event):
-        self.excitementValue.value = self.excitementSlider.get()
+        self.excitementScaler.value = self.excitementSlider.get()
 
+    def algoChanged (self, event):
+       if int(self.algoSelectorCombo.current()) == 0:
+           self.exciteScaler_label.configure(text="Surface Divider")    
+           self.curiosScaler_label.configure(text="Correlation Multiple 0.1")
+           self.freqScaler_label.configure(text="Not Used")
+           self.curiositySlider.configure(from_= self.curioSliderMin)            
+           self.curiositySlider.configure(to= self.curioSliderMax)
+           self.excitementSlider.configure(from_= self.excitementSliderMin)            
+           self.excitementSlider.configure(to = self.excitementSliderMax)                       
+           self.freqScaleSlider.configure(from_= self.freqScaleSliderMin)            
+           self.freqScaleSlider.configure(to= self.freqScaleSliderMax) 
+           self.excitementSlider.set(self.excitementCorrelationInit)   
+           self.curiositySlider.set(self.curiosityCorrelationInit)
+           self.freqScaleSlider.set(self.freqCorrelationInit)           
+
+       if int(self.algoSelectorCombo.current()) == 1:           
+           self.exciteScaler_label.configure(text="Excitement Threshold")
+           self.curiosScaler_label.configure(text="Curiosity Threshold")  
+           self.freqScaler_label.configure(text="Freq Scaling")
+           self.curiositySlider.configure(from_= 10)            
+           self.curiositySlider.configure(to = 500)  
+           self.excitementSlider.configure(from_= 10)            
+           self.excitementSlider.configure(to = 500)                       
+           self.freqScaleSlider.configure(from_= 2)            
+           self.freqScaleSlider.configure(to= 40)  
+           self.excitementSlider.set(self.excitementFourierInit)   
+           self.curiositySlider.set(self.curiosityFourierInit)
+           self.freqScaleSlider.set(self.freqFourierInit)            
+           
+           
     def stopRun(self) :
         self.finish.value = 1
         print ("finished it")
@@ -102,12 +167,17 @@ class mprocExample(tk.Tk):
     def run(self, *args): 
         lastTime = time.time()
         while self.finish.value == 0:  
-            if time.time() - lastTime > self.updateTime:
-                print ("Curiosity" + str(self.curiosity.value))
-                print ("Excitement" + str(self.excitement.value))
-                self.excitementBar['value'] = self.excitement.value
-                self.curiosityBar['value'] = self.curiosity.value 
-                lastTime = time.time()
+            self.algorithmSel.value = int(self.algoSelectorCombo.current())
+            if (time.time() - lastTime > self.updateTime):
+                if self.eegRunning:
+                    print ("Curiosity: " + str(self.curiosity.value))
+                    print ("Excitement: " + str(self.excitement.value))
+                    print ("Algorithm: " + str(self.algorithmSel.value))
+                    self.excitementBar['value'] = self.excitement.value
+                    self.curiosityBar['value'] = self.curiosity.value 
+                else:
+                    print("Waiting for acq to start")
+                lastTime = time.time()                
             self.update()  
         
         if self.finish.value == 2:
@@ -122,18 +192,19 @@ class mprocExample(tk.Tk):
         if self.eegRunning:
             self.eegRunning = False
             self.eegProc.join()
-        print(self.excitement.value)
-        print(self.curiosity.value)
-
+            
+        print("Program finished \n")
         self.destroy()
  
     def startEEG(self):  
         if not self.eegRunning:
             self.theEEG = EEG()
-            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish, self.eegStatus,self.curiositycalibValue, self.excitementValue ))
+            self.eegProc = mp.Process(target=self.theEEG.run, args=(self.excitement, self.curiosity, self.finish,
+                                        self.eegStatus, self.excitementScaler, self.curiosityScaler, self.freqScaler,  
+                                        self.algorithmSel))
             self.eegProc.start() 
             self.eegRunning = True
-        
+                                                                                                   
  
     def startArduino(self):
         if not self.ArduinoRunning:
