@@ -67,7 +67,12 @@ void doTheMove(){
     /* correction for smaller airdisplacement when pumping against higher pressure */
     float presCor = pressureCorrection / currentPressure; 
    
-    //If currentVolume smaller than set Volume,  then: Inflate else deflate
+    /* If currentVolume smaller than set Volume,  then: Inflate else deflate
+     * Note: the formula for volume integration is not correct as the time between
+     * move updates is not taken into account. For now it will have to do
+     * Also: in the end some form of real volume sensing is needed
+     * The Formula takes the pressure measurement into account as delta Volume depends on this
+     */
     if (currentVolume < setVolume) {
       analogWrite(vacuumPump, 0);
       analogWrite(pressurePump, pressureSpeed);
