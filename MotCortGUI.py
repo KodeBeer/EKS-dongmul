@@ -26,6 +26,8 @@ class mprocExample(tk.Tk):
         self.excitementScaler = mp.Value('d', 2200.0)
         self.freqScaler = mp.Value('d', 1.0 / 28.0)
         self.algorithmSel = mp.Value('i', 0)
+        self.negVolumeScaler = mp.Value('d', 1.2)
+        self.posVolumeScaler  = mp.Value('d', 0.8)
         self.ArduinoRunning = False
         self.eegRunning = False
         self.exciteInit = 0.5
@@ -52,7 +54,7 @@ class mprocExample(tk.Tk):
         Overview panel
         """
         self.title("Motor Cortex Control")
-        self.geometry("800x600")
+        self.geometry("1200x600")
         self.resizable(width = True, height = True)
         self.attributes("-topmost", True) 
         self.stopButton = tk.Button(self, text="Stop", command = self.stopRun)
@@ -101,12 +103,24 @@ class mprocExample(tk.Tk):
         self.portLabel.grid(column = 1, row = 10, sticky ='nwe')
         self.portEntry =  tk.Entry(self)
         self.portEntry.grid(column = 2, row = 10, sticky ='nwe')
-        self.portEntry.insert( -1, "3")
+        self.portEntry.insert( -1, "4")
         self.speedLabel = tk.Label(self, text = "Serial Speed")
         self.speedLabel.grid(column = 1, row = 15, sticky ='nwe')
         self.speedEntry =  tk.Entry(self)
         self.speedEntry.grid(column = 2, row = 15, sticky ='nwe')
-        self.speedEntry.insert(-1, "9600")
+        self.speedEntry.insert(-1, "115200")
+        self.posVolume_label = tk.Label(self, text="pos volume", width=20, height=2)
+        self.posVolume_label.grid(column = 5, row = 0, sticky='n')
+        self.posVolumeSlider = tk.Scale(self, from_= 2.0, to = 0.1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
+        self.posVolumeSlider.bind("<ButtonRelease-1>", self.updatePosVolSliderValue)
+        self.posVolumeSlider.set(0.8)
+        self.posVolumeSlider.grid(column = 5, row = 5, sticky = 'n') 
+        self.negVolume_label = tk.Label(self, text="neg volume", width=20, height=2)
+        self.negVolume_label.grid(column = 6, row = 0, sticky='n')
+        self.negVolumeSlider = tk.Scale(self, from_= 2.0, to = 0.1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
+        self.negVolumeSlider.bind("<ButtonRelease-1>", self.updateNegVolSliderValue)
+        self.negVolumeSlider.set(1.2)
+        self.negVolumeSlider.grid(column = 6, row = 5, sticky = 'n')
         
         """ 
         EEG settings
@@ -116,7 +130,7 @@ class mprocExample(tk.Tk):
         self.selectedAlgorithm= tk.StringVar()   
         self.algoSelectorCombo= ttk.Combobox(self, textvariable= self.selectedAlgorithm)         
         self.algoSelectorCombo['values']= ('Weight', 'Fourier')   
-        self.algoSelectorCombo.current(0)
+        self.algoSelectorCombo.current(1)
         self.algoSelectorCombo.grid(column = 1, row = 20, sticky ='nwe')   
         self.algoSelectorCombo.bind('<<ComboboxSelected>>', self.algoChanged)  
         self.update()   
@@ -129,6 +143,12 @@ class mprocExample(tk.Tk):
 
     def updateexcitementSliderValue(self, event):
         self.excitementScaler.value = self.excitementSlider.get()
+        
+    def updateNegVolSliderValue(self, event):
+        self.negVolumeScaler.value = self.negVolumeSlider.get()        
+
+    def updatePosVolSliderValue(self, event):
+        self.posVolumeScaler.value = self.posVolumeSlider.get()   
 
     def algoChanged (self, event):
        if int(self.algoSelectorCombo.current()) == 0:
@@ -212,7 +232,8 @@ class mprocExample(tk.Tk):
             speed = int(self.speedEntry.get())
             self.theArduino = Arduino(comPort, speed)
             self.ArduinoRunning = True
-            self.ardProc = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish))
+            self.ardProc = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish,
+                                             self.negVolumeScaler, self.posVolumeScaler))
             self.ardProc.start()    
 
 

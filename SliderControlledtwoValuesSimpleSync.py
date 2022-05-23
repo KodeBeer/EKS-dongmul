@@ -167,25 +167,28 @@ class AlphaSource(tk.Tk):
         self.excitement = self.excitementcurrent_value.get()
         self.excitement = round(self.excitement, 4)
         self.curiosity = self.curiositycurrent_value.get()
-        self.curiosity = round(self.curiosity, 4) 
+        self.curiosity = round(self.curiosity, 4)        
+
         freString = '0;' #Command to update speed and volume
         freString += str(self.excitement)   
-        freString += ','
-        freString += str(self.curiosity)
-        #freString += '\n' 
-        #print("Send Excitement + curiosity: " + freString)
+        freString += ';'
+        freString += str(self.curiosity) 
+        print("Send Excitement + curiosity: " + freString)
         self.arduino.write(freString.encode())
+
         
     def sendCalib(self):
         self.calibPos = self.calibPoscurrent_value.get()
         self.calibPos = round(self.calibPos, 4)
         self.calibNeg = self.calibNegcurrent_value.get()
         self.calibNeg = round(self.calibNeg, 4)
+ 
         freString = '1;'
         freString += str(self.calibPos)
-        freString += ','
+        freString += ';'
         freString += str(self.calibNeg)   
-        self.arduino.write(freString.encode())        
+        self.arduino.write(freString.encode())   
+       
               
 if __name__ == '__main__':
     app = AlphaSource()

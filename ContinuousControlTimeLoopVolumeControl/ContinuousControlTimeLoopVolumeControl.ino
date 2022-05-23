@@ -38,10 +38,12 @@ long int nextReportPressureTime = 1000;
 /* send the measured pressure to Python */
 void reportPressure(){
     currentPressure = analogRead(A3);
+    
     Serial.print("Pressure, Volume: ");
     Serial.print(currentPressure);
     Serial.print(" ");
     Serial.print(currentVolume);
+    
     reportPressureTime = millis() + nextReportPressureTime;
 }
 
@@ -54,11 +56,13 @@ void executeCommand(){
     firstFloat = Serial.parseFloat(); 
     secondFloat = Serial.parseFloat(); 
     pressureSpeed = mapFloat(firstFloat, 0, 1, 100, 180);
-    setVolume = mapFloat(secondFloat, 0, 1, 0, maxVolume);  
+    setVolume = mapFloat(secondFloat, 0, 1, 0, maxVolume); 
+    
     Serial.print("Speed, Pressure: ");
     Serial.print(pressureSpeed);
     Serial.print(" ");
-    Serial.println(setVolume);  
+    Serial.println(setVolume);
+      
 }
 
 /* Actual move execution */
