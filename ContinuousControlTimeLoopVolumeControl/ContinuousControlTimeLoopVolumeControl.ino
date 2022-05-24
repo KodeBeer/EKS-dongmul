@@ -17,10 +17,10 @@ int vacuumSpeed = 0;
 int setVolume = 0;
 int currentVolume = 0;
 int currentPressure = 0;
-float deltaPosVolume = 0.5;
-float deltaNegVolume = 1.2;
-float pressureCorrection = 500;
-int maxVolume = 1000;
+float deltaPosVolume = 1.5;
+float deltaNegVolume = 3.6;
+float pressureNormalization = 500.0;
+float maxVolume = 4000.0;
 int basePressure = 0; // base line calibration for low pressure
 
 /* Communication */
@@ -32,6 +32,7 @@ char initialized = 'i';
 /* Timing parameters */
 long int moveTime = 0; // Determines the time that the next movement is made must be long (mSec)
 long int nextMoveTime = 300; // time in mSec before next move is made after completion.
+float integrationTime = float(nextMoveTime) / 1000.0;
 long int reportPressureTime = 0; //do not report pressure too quickly
 long int nextReportPressureTime = 1000;
 
@@ -56,20 +57,17 @@ void executeCommand(){
     firstFloat = Serial.parseFloat(); 
     secondFloat = Serial.parseFloat(); 
     pressureSpeed = mapFloat(firstFloat, 0, 1, 100, 180);
-    setVolume = mapFloat(secondFloat, 0, 1, 0, maxVolume); 
-    
+    setVolume = mapFloat(secondFloat, 0, 1, 0, maxVolume);   
     Serial.print("Speed, Pressure: ");
     Serial.print(pressureSpeed);
     Serial.print(" ");
-    Serial.println(setVolume);
-      
+    Serial.println(setVolume);      
 }
 
 /* Actual move execution */
 void doTheMove(){
     currentPressure = analogRead(A3);
     /* correction for smaller airdisplacement when pumping against higher pressure */
-    float presCor = pressureCorrection / currentPressure; 
    
     /* If currentVolume smaller than set Volume,  then: Inflate else deflate
      * Note: the formula for volume integration is not correct as the time between
@@ -80,15 +78,15 @@ void doTheMove(){
     if (currentVolume < setVolume) {
       analogWrite(vacuumPump, 0);
       analogWrite(pressurePump, pressureSpeed);
-      currentVolume += deltaPosVolume * pressureSpeed * presCor;
+      currentVolume += deltaPosVolume * pressureSpeed * integrationTime * pressureNormalization / currentPressure;
     } else {  
       if (currentPressure > basePressure) {
         analogWrite(vacuumPump, pressureSpeed);
         analogWrite(pressurePump, 0); 
-        currentVolume -= deltaNegVolume * pressureSpeed / presCor;
+        currentVolume -= deltaNegVolume * pressureSpeed * integrationTime * currentPressure / pressureNormalization;
       }     
     } 
-    moveTime = millis() + nextMoveTime;  
+    moveTime = millis() + nextMoveTime;
 } 
 
 void processTheInput(){

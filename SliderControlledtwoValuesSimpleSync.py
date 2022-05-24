@@ -49,14 +49,14 @@ class AlphaSource(tk.Tk):
 
         self.excitementvalue_label = ttk.Label(self, text=self.excitementget_current_value())
         self.excitementvalue_label.grid(row=4, column = 0,  sticky='n')               
-        excitementSlider = ttk.Scale(self,from_= 1.0 ,to = 0.1, orient='vertical', length = 250,  
+        excitementSlider = ttk.Scale(self,from_= 1.0, to = 0.2, orient='vertical', length = 250,  
                                      command=self.excitementSlider_changed, variable=self.excitementcurrent_value)
         excitementSlider.set(0.3)
         excitementSlider.grid(column=0,row=0,sticky='we')
         excitementcurrent_value_label = ttk.Label(self, text='Excitement:')       
         excitementcurrent_value_label.grid(row=1, column = 0,  sticky='n', ipadx=10, ipady=10)
         
-        curiositySlider = ttk.Scale(self,from_= 1.0 ,to = 0.1, orient='vertical', length = 250, 
+        curiositySlider = ttk.Scale(self,from_= 1.0 ,to = 0.2, orient='vertical', length = 250, 
                                     command=self.curiositySlider_changed, variable=self.curiositycurrent_value)
         self.curiosityvalue_label = ttk.Label(self, text=self.curiosityget_current_value())
         self.curiosityvalue_label.grid(row=4, column = 1,  sticky='n')               
@@ -65,30 +65,30 @@ class AlphaSource(tk.Tk):
         curiositycurrent_value_label = ttk.Label(self, text='Curiosity:')       
         curiositycurrent_value_label.grid(row=1, column = 1,  sticky='n', ipadx=10, ipady=10)
 
-        calibPosSlider = ttk.Scale(self,from_= 2.0, to = 0.1, orient='vertical', length = 250,  
+        calibPosSlider = ttk.Scale(self,from_= 0.5, to = 0.05, orient='vertical', length = 250,  
                                    command=self.calibPosSlider_changed, variable=self.calibPoscurrent_value)
         
         self.calibPosvalue_label = ttk.Label(self, text=self.calibPosget_current_value())
         self.calibPosvalue_label.grid(row=4, column = 2,  sticky='n')        
-        calibPosSlider.set(0.5)
+        calibPosSlider.set(0.17)
         calibPosSlider.grid(column=2,row=0,sticky='we')
-        calibPoscurrent_value_label = ttk.Label(self, text='CalibPos:')       
+        calibPoscurrent_value_label = ttk.Label(self, text='Pos Delta Volume:')       
         calibPoscurrent_value_label.grid(row=1, column = 2,  sticky='n', ipadx=10, ipady=10)
 
-        calibNegSlider = ttk.Scale(self,from_= 2.0, to = 0.1, orient='vertical', length = 250,  
+        calibNegSlider = ttk.Scale(self,from_= 0.50, to = 0.05, orient='vertical', length = 250,  
                                    command=self.calibNegSlider_changed, variable=self.calibNegcurrent_value)
         
         self.calibNegvalue_label = ttk.Label(self, text=self.calibNegget_current_value())
         self.calibNegvalue_label.grid(row=4, column = 3,  sticky='n') 
-        calibNegSlider.set(1.2)
+        calibNegSlider.set(0.22)
         calibNegSlider.grid(column=3,row=0,sticky='we')
-        calibNegcurrent_value_label = ttk.Label(self, text='CalibNeg:')       
+        calibNegcurrent_value_label = ttk.Label(self, text='Neg Delta Volume:')       
         calibNegcurrent_value_label.grid(row=1, column = 3,  sticky='n', ipadx=10, ipady=10)
                
         self.response_label = ttk.Label (self, text = "Serial not started")
-        self.response_label.grid(column=0,row=8,sticky='we')
+        self.response_label.grid(column=0,row=8,sticky='we', columnspan = 2)
         self.message_label = ttk.Label (self, text = "None")
-        self.message_label.grid(column=2,row=8,sticky='we')
+        self.message_label.grid(column=2,row=8,sticky='we', columnspan= 3)
 
         """
         Buttons
@@ -97,7 +97,7 @@ class AlphaSource(tk.Tk):
         self.startUsbButton.grid(column = 0, row = 6, sticky = 'we')  
         self.sendEEGButton = ttk.Button(self, text="Send EEG", command = self.sendEEG)        
         self.sendEEGButton.grid(column = 0, row = 10, sticky = 'we' )   
-        self.sendCalibButton = ttk.Button(self, text="Send Calib", command = self.sendCalib)        
+        self.sendCalibButton = ttk.Button(self, text="Calib Volume", command = self.sendCalib)        
         self.sendCalibButton.grid(column = 0, row = 12, sticky = 'we' )         
         self.stopButton = ttk.Button(self, text="Exit", command = self.stop)
         self.stopButton.grid(column = 0, row = 15, sticky = 'we')  
