@@ -21,8 +21,8 @@ class EEG():
         self.channel_numbers = [1, 2]
         self.limitHigh = 0.99
         self.smoothIdx = 0
-        self.smoothExcitement = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
-        self.smoothCuriosity = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
+        self.smoothExcitement = np.array([0.0, 0.0, 0.0, 0.0])
+        self.smoothCuriosity = np.array([0.0, 0.0, 0.0, 0.0])
 
     def findPeakInFourier(self, Signal, threshold):
         fourierTransform = np.fft.rfft(Signal, n = self.fftLength)/len(Signal)          # Normalize amplitude 

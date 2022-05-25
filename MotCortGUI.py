@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Mar  7 20:30:03 2022
-Adapted 14 MArch
+A
 
 @author: Erwin
 """
@@ -28,6 +28,7 @@ class mprocExample(tk.Tk):
         self.algorithmSel = mp.Value('i', 0)
         self.negVolumeScaler = mp.Value('d', 1.2)
         self.posVolumeScaler  = mp.Value('d', 0.8)
+        self.ArduinoCommand = mp.Value('i', -1)
         self.ArduinoRunning = False
         self.eegRunning = False
         self.exciteInit = 0.5
@@ -45,8 +46,7 @@ class mprocExample(tk.Tk):
         self.curiosityFourierInit = 150.0
         self.excitementFourierInit= 50
         self.freqFourierInit= 28        
-        
-        
+    
         self.initGui()
         
     def initGui(self):
@@ -59,6 +59,11 @@ class mprocExample(tk.Tk):
         self.attributes("-topmost", True) 
         self.stopButton = tk.Button(self, text="Stop", command = self.stopRun)
         self.stopButton.grid(column = 0, row = 20, sticky = 'we') 
+        self.calibrateButton = tk.Button(self, text="Calibrate", command = self.calibrateArduino)
+        self.calibrateButton.grid(column = 0, row = 16, sticky = 'we')         
+        self.resetButton = tk.Button(self, text="Reset", command = self.resetArduino)
+        self.resetButton.grid(column = 0, row = 17, sticky = 'we')         
+        
         self.excitementBar = ttk.Progressbar(self, orient='vertical', length=300, mode='determinate', maximum = 1)
         self.excitementBar['value'] = self.exciteInit
         self.excitementBar.grid(column = 0, row = 5, sticky='we')
@@ -111,15 +116,15 @@ class mprocExample(tk.Tk):
         self.speedEntry.insert(-1, "115200")
         self.posVolume_label = tk.Label(self, text="pos volume", width=20, height=2)
         self.posVolume_label.grid(column = 5, row = 0, sticky='n')
-        self.posVolumeSlider = tk.Scale(self, from_= 2.0, to = 0.1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
+        self.posVolumeSlider = tk.Scale(self, from_= 50.0, to = 1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
         self.posVolumeSlider.bind("<ButtonRelease-1>", self.updatePosVolSliderValue)
-        self.posVolumeSlider.set(0.8)
+        self.posVolumeSlider.set(17.0)
         self.posVolumeSlider.grid(column = 5, row = 5, sticky = 'n') 
         self.negVolume_label = tk.Label(self, text="neg volume", width=20, height=2)
         self.negVolume_label.grid(column = 6, row = 0, sticky='n')
-        self.negVolumeSlider = tk.Scale(self, from_= 2.0, to = 0.1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
+        self.negVolumeSlider = tk.Scale(self, from_= 50.0, to = 1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
         self.negVolumeSlider.bind("<ButtonRelease-1>", self.updateNegVolSliderValue)
-        self.negVolumeSlider.set(1.2)
+        self.negVolumeSlider.set(30.0)
         self.negVolumeSlider.grid(column = 6, row = 5, sticky = 'n')
         
         """ 
@@ -145,10 +150,10 @@ class mprocExample(tk.Tk):
         self.excitementScaler.value = self.excitementSlider.get()
         
     def updateNegVolSliderValue(self, event):
-        self.negVolumeScaler.value = self.negVolumeSlider.get()        
+        self.negVolumeScaler.value = self.negVolumeSlider.get() / 1000       
 
     def updatePosVolSliderValue(self, event):
-        self.posVolumeScaler.value = self.posVolumeSlider.get()   
+        self.posVolumeScaler.value = self.posVolumeSlider.get() / 1000 
 
     def algoChanged (self, event):
        if int(self.algoSelectorCombo.current()) == 0:
@@ -188,13 +193,14 @@ class mprocExample(tk.Tk):
         lastTime = time.time()
         while self.finish.value == 0:  
             self.algorithmSel.value = int(self.algoSelectorCombo.current())
-            if (time.time() - lastTime > self.updateTime):
+            if (time.time() - lastTime > self.updateTime) and (self.ArduinoCommand.value == -1):
                 if self.eegRunning:
                     print ("Curiosity: " + str(self.curiosity.value))
                     print ("Excitement: " + str(self.excitement.value))
                     print ("Algorithm: " + str(self.algorithmSel.value))
                     self.excitementBar['value'] = self.excitement.value
                     self.curiosityBar['value'] = self.curiosity.value 
+                    self.ArduinoCommand.value = 0;
                 else:
                     print("Waiting for acq to start")
                 lastTime = time.time()                
@@ -215,7 +221,13 @@ class mprocExample(tk.Tk):
             
         print("Program finished \n")
         self.destroy()
- 
+
+    def calibrateArduino(self):
+        self.ArduinoCommand.value = 1
+        
+    def resetArduino(self):
+        self.ArduinoCommand.value = 2
+
     def startEEG(self):  
         if not self.eegRunning:
             self.theEEG = EEG()
@@ -223,8 +235,7 @@ class mprocExample(tk.Tk):
                                         self.eegStatus, self.excitementScaler, self.curiosityScaler, self.freqScaler,  
                                         self.algorithmSel))
             self.eegProc.start() 
-            self.eegRunning = True
-                                                                                                   
+            self.eegRunning = True                                                                                                  
  
     def startArduino(self):
         if not self.ArduinoRunning:
@@ -233,7 +244,7 @@ class mprocExample(tk.Tk):
             self.theArduino = Arduino(comPort, speed)
             self.ArduinoRunning = True
             self.ardProc = mp.Process(target=self.theArduino.run, args=(self.excitement, self.curiosity, self.finish,
-                                             self.negVolumeScaler, self.posVolumeScaler))
+                                             self.negVolumeScaler, self.posVolumeScaler, self.ArduinoCommand))
             self.ardProc.start()    
 
 

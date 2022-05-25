@@ -12,16 +12,14 @@ from tkinter import ttk
 import serial
 #import time
 
-class AlphaSource(tk.Tk):
+class GUI(tk.Tk):
    
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initTheGui() 
         self.arduinoStarted = False
-        self.measuredone = True
-        self.measureLoop()
         self.arduino = serial.Serial()
-        self.arduinoReady = False
+        self.measureLoop()
            
     def measureLoop(self):            
         if self.arduinoStarted:  # This is after communication with Arduino was succesfully started
@@ -41,6 +39,7 @@ class AlphaSource(tk.Tk):
         self.title("Excitement Curiosity simulator")
         self.geometry("600x600")
         self.resizable(width = True, height = True)
+        self.attributes("-topmost", True) 
         # slider current value
         self.excitementcurrent_value = tk.DoubleVar()
         self.curiositycurrent_value = tk.DoubleVar()   
@@ -49,38 +48,38 @@ class AlphaSource(tk.Tk):
 
         self.excitementvalue_label = ttk.Label(self, text=self.excitementget_current_value())
         self.excitementvalue_label.grid(row=4, column = 0,  sticky='n')               
-        excitementSlider = ttk.Scale(self,from_= 1.0, to = 0.2, orient='vertical', length = 250,  
+        excitementSlider = ttk.Scale(self,from_= 1.0, to = 0.1, orient='vertical', length = 250,  
                                      command=self.excitementSlider_changed, variable=self.excitementcurrent_value)
         excitementSlider.set(0.3)
         excitementSlider.grid(column=0,row=0,sticky='we')
         excitementcurrent_value_label = ttk.Label(self, text='Excitement:')       
         excitementcurrent_value_label.grid(row=1, column = 0,  sticky='n', ipadx=10, ipady=10)
         
-        curiositySlider = ttk.Scale(self,from_= 1.0 ,to = 0.2, orient='vertical', length = 250, 
+        curiositySlider = ttk.Scale(self,from_= 1.0 ,to = 0.01, orient='vertical', length = 250, 
                                     command=self.curiositySlider_changed, variable=self.curiositycurrent_value)
         self.curiosityvalue_label = ttk.Label(self, text=self.curiosityget_current_value())
         self.curiosityvalue_label.grid(row=4, column = 1,  sticky='n')               
-        curiositySlider.set(0.3)
+        curiositySlider.set(0.1)
         curiositySlider.grid(column=1,row=0,sticky='we')
         curiositycurrent_value_label = ttk.Label(self, text='Curiosity:')       
         curiositycurrent_value_label.grid(row=1, column = 1,  sticky='n', ipadx=10, ipady=10)
 
-        calibPosSlider = ttk.Scale(self,from_= 0.5, to = 0.05, orient='vertical', length = 250,  
+        calibPosSlider = ttk.Scale(self,from_= 40, to = 10, orient='vertical', length = 250,  
                                    command=self.calibPosSlider_changed, variable=self.calibPoscurrent_value)
         
         self.calibPosvalue_label = ttk.Label(self, text=self.calibPosget_current_value())
         self.calibPosvalue_label.grid(row=4, column = 2,  sticky='n')        
-        calibPosSlider.set(0.17)
+        calibPosSlider.set(17)
         calibPosSlider.grid(column=2,row=0,sticky='we')
         calibPoscurrent_value_label = ttk.Label(self, text='Pos Delta Volume:')       
         calibPoscurrent_value_label.grid(row=1, column = 2,  sticky='n', ipadx=10, ipady=10)
 
-        calibNegSlider = ttk.Scale(self,from_= 0.50, to = 0.05, orient='vertical', length = 250,  
+        calibNegSlider = ttk.Scale(self,from_= 40, to = 10, orient='vertical', length = 250,  
                                    command=self.calibNegSlider_changed, variable=self.calibNegcurrent_value)
         
         self.calibNegvalue_label = ttk.Label(self, text=self.calibNegget_current_value())
         self.calibNegvalue_label.grid(row=4, column = 3,  sticky='n') 
-        calibNegSlider.set(0.22)
+        calibNegSlider.set(30)
         calibNegSlider.grid(column=3,row=0,sticky='we')
         calibNegcurrent_value_label = ttk.Label(self, text='Neg Delta Volume:')       
         calibNegcurrent_value_label.grid(row=1, column = 3,  sticky='n', ipadx=10, ipady=10)
@@ -98,7 +97,11 @@ class AlphaSource(tk.Tk):
         self.sendEEGButton = ttk.Button(self, text="Send EEG", command = self.sendEEG)        
         self.sendEEGButton.grid(column = 0, row = 10, sticky = 'we' )   
         self.sendCalibButton = ttk.Button(self, text="Calib Volume", command = self.sendCalib)        
-        self.sendCalibButton.grid(column = 0, row = 12, sticky = 'we' )         
+        self.sendCalibButton.grid(column = 0, row = 12, sticky = 'we' ) 
+        self.resetButton = ttk.Button(self, text="Reset", command = self.resetArduino)        
+        self.resetButton.grid(column = 1, row = 12, sticky = 'we' ) 
+
+        
         self.stopButton = ttk.Button(self, text="Exit", command = self.stop)
         self.stopButton.grid(column = 0, row = 15, sticky = 'we')  
         
@@ -134,6 +137,7 @@ class AlphaSource(tk.Tk):
             self.arduino.flush()  # make sure buffer is emptied. There may be noise on the line due to USB connection
             self.response_label.config(text="Serial started")
             self.startUsbButton["state"] = tk.DISABLED
+            self.sendCalib()
             self.arduinoStarted = True # inform main loop that serial communication is there
             
         except Exception as e:
@@ -173,14 +177,14 @@ class AlphaSource(tk.Tk):
         freString += str(self.excitement)   
         freString += ';'
         freString += str(self.curiosity) 
-        print("Send Excitement + curiosity: " + freString)
+        #print("Send Excitement + curiosity: " + freString)
         self.arduino.write(freString.encode())
 
         
     def sendCalib(self):
-        self.calibPos = self.calibPoscurrent_value.get()
+        self.calibPos = self.calibPoscurrent_value.get() / 1000
         self.calibPos = round(self.calibPos, 4)
-        self.calibNeg = self.calibNegcurrent_value.get()
+        self.calibNeg = self.calibNegcurrent_value.get() / 1000
         self.calibNeg = round(self.calibNeg, 4)
  
         freString = '1;'
@@ -188,8 +192,12 @@ class AlphaSource(tk.Tk):
         freString += ';'
         freString += str(self.calibNeg)   
         self.arduino.write(freString.encode())   
+        
+    def resetArduino(self):
+        freString = '2' 
+        self.arduino.write(freString.encode())        
        
               
 if __name__ == '__main__':
-    app = AlphaSource()
+    app = GUI()
     app.mainloop()
