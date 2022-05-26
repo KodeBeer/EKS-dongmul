@@ -23,13 +23,14 @@ const int Valve3 = 6;
 */
 
 int PumpSpeed = 0; // PWM to the motors, pump rotation speed assumed to be linear with PWM at 0 counterpressure
-float setVolume = 0;         // Requested volume of air in Dongmul 
-float currentVolume = 0;     // Current 'calcuguessed' volume of air in Dongmul, prefer using a sensor
+float setVolume = 0.0;         // Requested volume of air in Dongmul 
+float currentVolume = 0.0;     // Current 'calcuguessed' volume of air in Dongmul, prefer using a sensor
 float pressureCalFactor = 500; // Atmosphere pressure is roughly 500 by the factor with currentpressure a linear relation is assumed
 float currentPressure = 500;   // Current pressure as measured by presssure sensor
 float deltaPressureVolume = 0.005; // Amount of air pumped by pressure pump for PWM 1 and 0 counter pressure
 float deltaVacuumVolume = 0.01;      // Amount of air pumped by vacuum pump for PWM 1 and 0 counter pressure
 float maxVolume = 15.0;   // max Allowed volume
+float motorFloor = 90.0; //For this PWM value the motor starts getting to be active. So in volume formula subtracted
 int basePressure = 0; // base line calibration for low pressure, used to stop vacuumpump when dongmul is empty
 
 /* Communication */
@@ -63,7 +64,7 @@ void calibrateVolume(){
 void executeCommand(){
     firstFloat = Serial.parseFloat(); 
     secondFloat = Serial.parseFloat(); 
-    PumpSpeed = mapFloat(firstFloat, 0, 1, 80, 140);
+    PumpSpeed = mapFloat(firstFloat, 0, 1, 80, 160);
     setVolume = mapFloat(secondFloat, 0, 1, 0, maxVolume);       
 }
 
@@ -88,6 +89,7 @@ void resetVolume(){
 
 /* Actual move execution */
 void doTheMove(){
+    moveTime = millis() + nextMoveTime; // put here so duration of calculation does not influence it
     currentPressure = analogRead(A3);
    
     /* If currentVolume smaller than set Volume,  then: Inflate else deflate
@@ -95,17 +97,17 @@ void doTheMove(){
     if (currentVolume < setVolume) {
       analogWrite(vacuumPump, 0);
       analogWrite(pressurePump, PumpSpeed);
-      currentVolume += integrationTime * PumpSpeed * deltaPressureVolume * float(pressureCalFactor) / float(currentPressure) ;
+      currentVolume += integrationTime * 1.20 * (PumpSpeed - motorFloor) * deltaPressureVolume * float(pressureCalFactor) / float(currentPressure) ;
     } else {  
       if (currentPressure > basePressure) {
         analogWrite(vacuumPump, PumpSpeed);
         analogWrite(pressurePump, 0); 
-        currentVolume -= integrationTime * PumpSpeed * deltaVacuumVolume * float(currentPressure) / float(pressureCalFactor) ;
+        currentVolume -= integrationTime * 1.20 * (PumpSpeed - motorFloor) * deltaVacuumVolume * float(currentPressure) / float(pressureCalFactor) ;
       }  else{
          analogWrite(vacuumPump, 0); // stop taking air out         
       }
     } 
-    moveTime = millis() + nextMoveTime;
+
 } 
 
 void processTheInput(){
@@ -144,14 +146,15 @@ void setup() {
 }
 
 void loop() {
+  if (Serial.available()) {
+    processTheInput();
+  }
   if (millis() > moveTime){
     doTheMove();
   }  
   if (millis() > reportPressureTime) {
     reportPressure();
   }
-  if (Serial.available()) {
-    processTheInput();
-  }
+
 }
   

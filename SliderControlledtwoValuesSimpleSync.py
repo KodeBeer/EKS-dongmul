@@ -64,7 +64,7 @@ class GUI(tk.Tk):
         curiositycurrent_value_label = ttk.Label(self, text='Curiosity:')       
         curiositycurrent_value_label.grid(row=1, column = 1,  sticky='n', ipadx=10, ipady=10)
 
-        calibPosSlider = ttk.Scale(self,from_= 40, to = 10, orient='vertical', length = 250,  
+        calibPosSlider = ttk.Scale(self,from_= 50, to = 10, orient='vertical', length = 250,  
                                    command=self.calibPosSlider_changed, variable=self.calibPoscurrent_value)
         
         self.calibPosvalue_label = ttk.Label(self, text=self.calibPosget_current_value())
@@ -74,7 +74,7 @@ class GUI(tk.Tk):
         calibPoscurrent_value_label = ttk.Label(self, text='Pos Delta Volume:')       
         calibPoscurrent_value_label.grid(row=1, column = 2,  sticky='n', ipadx=10, ipady=10)
 
-        calibNegSlider = ttk.Scale(self,from_= 40, to = 10, orient='vertical', length = 250,  
+        calibNegSlider = ttk.Scale(self,from_= 100, to = 10, orient='vertical', length = 250,  
                                    command=self.calibNegSlider_changed, variable=self.calibNegcurrent_value)
         
         self.calibNegvalue_label = ttk.Label(self, text=self.calibNegget_current_value())

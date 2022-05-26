@@ -26,8 +26,8 @@ class mprocExample(tk.Tk):
         self.excitementScaler = mp.Value('d', 2200.0)
         self.freqScaler = mp.Value('d', 1.0 / 28.0)
         self.algorithmSel = mp.Value('i', 0)
-        self.negVolumeScaler = mp.Value('d', 1.2)
-        self.posVolumeScaler  = mp.Value('d', 0.8)
+        self.negVolumeScaler = mp.Value('d', 0.032)
+        self.posVolumeScaler  = mp.Value('d', 0.1)
         self.ArduinoCommand = mp.Value('i', -1)
         self.ArduinoRunning = False
         self.eegRunning = False
@@ -116,15 +116,15 @@ class mprocExample(tk.Tk):
         self.speedEntry.insert(-1, "115200")
         self.posVolume_label = tk.Label(self, text="pos volume", width=20, height=2)
         self.posVolume_label.grid(column = 5, row = 0, sticky='n')
-        self.posVolumeSlider = tk.Scale(self, from_= 50.0, to = 1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
+        self.posVolumeSlider = tk.Scale(self, from_= 80.0, to = 1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
         self.posVolumeSlider.bind("<ButtonRelease-1>", self.updatePosVolSliderValue)
-        self.posVolumeSlider.set(17.0)
+        self.posVolumeSlider.set(32.0)
         self.posVolumeSlider.grid(column = 5, row = 5, sticky = 'n') 
         self.negVolume_label = tk.Label(self, text="neg volume", width=20, height=2)
         self.negVolume_label.grid(column = 6, row = 0, sticky='n')
-        self.negVolumeSlider = tk.Scale(self, from_= 50.0, to = 1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
+        self.negVolumeSlider = tk.Scale(self, from_= 100.0, to = 1, orient="vertical", digits = 3, resolution = 0.01, length = 300, sliderlength = 20)
         self.negVolumeSlider.bind("<ButtonRelease-1>", self.updateNegVolSliderValue)
-        self.negVolumeSlider.set(30.0)
+        self.negVolumeSlider.set(100.0)
         self.negVolumeSlider.grid(column = 6, row = 5, sticky = 'n')
         
         """ 
