@@ -13,13 +13,20 @@ const int Valve3 = 6;
 
 /* Pressure controls 
    Assumed is:
-   1) with equal pressure motor rotation speed is linear with PWM
+   1) with equal pressure motor rotation speed is linear with PWM,with an offset  (motRot = factor * (PWM - floor) )
    2) with increasing pressure, motor rotation is linearly influenced (faster or slower depending on vacuum or pressure motor
    2a) pressure is assumed 0 at 500 sensor reading
-   3) Pressurepump deltaVolume = integrationTime * PumpSpeed * deltaPressureVolume * pressureCalFactor / currentPressure
-   4) Vacuumpump   deltaVolume = - integrationTime * vacuumPumpSpeed * deltaVacuumVolume * currentPressure / pressureCalFactor
+   3) Pressurepump: deltaVolume = integrationTime * (PumpSpeed - floor) * deltaPressureVolume * pressureCalFactor / currentPressure
+   4) Vacuumpump:   deltaVolume = - integrationTime * (PumpSpeed - floor)* deltaVacuumVolume * currentPressure / pressureCalFactor
+   5) Leakage in the tubes can be neglected (no idea if this is true)
    Note for 3 and 4: higher pressure slows pressure pump down and speeds vacuumpump up
+   Note for 3 and 4: vacuumpump gets out air much faster than pressurepump gets air in
    Note for all above: these are guesses, and should be measured and calibrated, or real volume should be measured
+   Measuring real calibrated air flow is preferred.
+   Note the algorithms were made with some educated guessing and tinkering. I have not checked if they can be made 
+   more efficient. E.g. by calculating 'constants' only once or by checking if multiplying int and float is faster than 
+   casting int to float and then multiplying. So still some evaluation to be done.
+   Also: measuring real air displacement is better.
 */
 
 int PumpSpeed = 0; // PWM to the motors, pump rotation speed assumed to be linear with PWM at 0 counterpressure
@@ -70,7 +77,8 @@ void executeCommand(){
 
 void resetVolume(){
   /*
-   * stop pumps
+   * stop pumps and empty.
+   * May be used as 'emergency measure', control from Python is possible!
    */
   analogWrite(vacuumPump, 0);
   analogWrite(pressurePump, 0);
@@ -112,6 +120,7 @@ void doTheMove(){
 
 void processTheInput(){
     thisCommand = Serial.parseInt();
+    // careful, if times are too short then not all commands may be carried out anymore
     switch (thisCommand) {
       case 0:
         executeCommand();
