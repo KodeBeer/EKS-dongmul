@@ -112,7 +112,7 @@ class GUI(tk.Tk):
         portLabel.grid(column = 1, row = 6, sticky ='nwe')
         self.portEntry =  tk.Entry(self)
         self.portEntry.grid(column = 2, row = 6, sticky ='nwe')
-        self.portEntry.insert( -1, "COM4")
+        self.portEntry.insert( -1, "ttyUSB0")
         speedLabel =tk.Label(self, text = "Speed")
         speedLabel.grid(column = 3, row = 6, sticky ='nwe')
         self.speedEntry =  tk.Entry(self)
